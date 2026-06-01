@@ -60,7 +60,7 @@ SYSTEM_INSTRUCTIONS = """# 🎯 竞彩足球分析 MCP - 专业版
 ---
 
 ### 🛡️ 第三选择：全面风险评估
-**工具**: `lottery_comprehensive_risk_workflow`
+**工具**: `lottery_comprehensive_risk_assessment`
 
 **何时用**：要检查某个投注方案是否安全
 

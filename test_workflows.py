@@ -154,7 +154,7 @@ def simulate_llm_conversation():
 
     logger.info("\n👤 用户: '这个方案风险如何？'")
     logger.info("🤖 LLM: '让我做个全面风险评估...'")
-    logger.info("   → 工具: lottery_comprehensive_risk_workflow")
+    logger.info("   → 工具: lottery_comprehensive_risk_assessment")
 
     logger.info("\n👤 用户: '你们有哪些可用的分析工具？'")
     logger.info("🤖 LLM: '让我查看一下工作流清单...'")
