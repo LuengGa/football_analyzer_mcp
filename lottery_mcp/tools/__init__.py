@@ -73,6 +73,7 @@ from .system_tools import register_system_tools
 from .enhanced_tools_mcp import register_enhanced_tools
 from .prediction_tools import register_prediction_tools
 from .historical_tools import register_historical_tools
+from .workflows import register_workflow_tools
 from .resources import register_resources
 from .prompts import register_prompts
 
@@ -85,6 +86,9 @@ def register_all_tools(mcp):
     Args:
         mcp: FastMCP 实例
     """
+    # ⭐ 首先注册端到端工作流工具（最优先！
+    register_workflow_tools(mcp)
+    
     register_rules_tools(mcp)
     register_guardrails_tools(mcp)
     register_data_tools(mcp)
