@@ -314,31 +314,36 @@ class SmartAdvisor:
         risk_tolerance: str,
         strategy: str,
     ):
-        """生成个性化投注方案"""
+        """生成个性化投注方案 - 覆盖全部5种竞彩玩法"""
         plans = []
         spf = analysis.spf_probs
 
-        # 凯利准则计算投注比例
         kelly_factors = {"low": 0.10, "medium": 0.20, "high": 0.35}
         kelly_mult = kelly_factors.get(risk_tolerance, 0.20)
 
-        spf_info = analysis.official_odds.get("spf", {})
-        odds = spf_info.get("odds", {})
+        official_odds = analysis.official_odds
 
+        def _calc_kelly_stake(prob, actual_odds):
+            if actual_odds <= 1.0:
+                return 0, 0
+            b = actual_odds - 1
+            p = prob
+            q = 1 - p
+            if b <= 0:
+                return 0, 0
+            kelly_fraction = max(0, (b * p - q) / b)
+            return kelly_fraction, round(bankroll * kelly_fraction * kelly_mult, 2)
+
+        # --- SPF 胜平负 ---
+        spf_info = official_odds.get("spf", {})
+        odds = spf_info.get("odds", {})
         for selection, prob in spf.items():
             if prob > 0.35 and selection in odds:
                 fair_odds = 1 / prob
                 actual_odds = odds[selection]
                 edge = (actual_odds - fair_odds) / fair_odds
-
                 if edge > 0:
-                    # 凯利公式: f = (bp - q) / b
-                    b = actual_odds - 1  # 净赔率
-                    p = prob
-                    q = 1 - p
-                    kelly_fraction = max(0, (b * p - q) / b) if b > 0 else 0
-                    suggested_stake = round(bankroll * kelly_fraction * kelly_mult, 2)
-
+                    kf, suggested_stake = _calc_kelly_stake(prob, actual_odds)
                     if suggested_stake > 10:
                         plans.append({
                             "play_type": "SPF",
@@ -346,11 +351,125 @@ class SmartAdvisor:
                             "probability": round(prob, 4),
                             "odds": actual_odds,
                             "edge": round(edge * 100, 1),
-                            "kelly_fraction": round(kelly_fraction, 4),
+                            "kelly_fraction": round(kf, 4),
                             "suggested_stake": suggested_stake,
                             "expected_value": round(suggested_stake * edge, 2),
                             "risk_level": "低" if prob > 0.55 else "中" if prob > 0.45 else "高",
                         })
+
+        # --- RQSPF 让球胜平负 ---
+        rqspf_info = official_odds.get("rqspf", {})
+        rqspf_odds = rqspf_info.get("odds", {})
+        rqspf_probs = getattr(analysis, "rqspf_probs", None)
+        if rqspf_probs and rqspf_odds:
+            handicap = rqspf_info.get("handicap", 0)
+            for selection in ["胜", "平", "负"]:
+                if selection in rqspf_probs and selection in rqspf_odds:
+                    prob = rqspf_probs[selection]
+                    actual_odds = rqspf_odds[selection]
+                    if actual_odds > 1.0 and prob > 0.30:
+                        fair_odds = 1 / prob
+                        edge = (actual_odds - fair_odds) / fair_odds
+                        if edge > 0.05:
+                            kf, suggested_stake = _calc_kelly_stake(prob, actual_odds)
+                            if suggested_stake > 10:
+                                plans.append({
+                                    "play_type": "RQSPF",
+                                    "selection": selection,
+                                    "handicap": handicap,
+                                    "probability": round(prob, 4),
+                                    "odds": actual_odds,
+                                    "edge": round(edge * 100, 1),
+                                    "kelly_fraction": round(kf, 4),
+                                    "suggested_stake": suggested_stake,
+                                    "expected_value": round(suggested_stake * edge, 2),
+                                    "risk_level": "中" if prob > 0.40 else "高",
+                                })
+
+        # --- ZJQ 总进球 ---
+        zjq_info = official_odds.get("zjq", {})
+        zjq_odds = zjq_info.get("odds", {})
+        zjq_probs = getattr(analysis, "zjq_probs", None)
+        if zjq_probs and zjq_odds:
+            for selection in ["0", "1", "2", "3", "4", "5", "6", "7+"]:
+                if selection in zjq_probs and selection in zjq_odds:
+                    prob = zjq_probs[selection]
+                    actual_odds = zjq_odds[selection]
+                    if actual_odds > 1.5 and prob > 0.25:
+                        fair_odds = 1 / prob
+                        edge = (actual_odds - fair_odds) / fair_odds
+                        if edge > 0.08:
+                            kf, suggested_stake = _calc_kelly_stake(prob, actual_odds)
+                            if suggested_stake > 10:
+                                plans.append({
+                                    "play_type": "ZJQ",
+                                    "selection": selection,
+                                    "probability": round(prob, 4),
+                                    "odds": actual_odds,
+                                    "edge": round(edge * 100, 1),
+                                    "kelly_fraction": round(kf, 4),
+                                    "suggested_stake": suggested_stake,
+                                    "expected_value": round(suggested_stake * edge, 2),
+                                    "risk_level": "中",
+                                })
+
+        # --- BF 比分 (Top 5 results) ---
+        bf_info = official_odds.get("bf", {})
+        bf_odds = bf_info.get("odds", {})
+        bf_probs = getattr(analysis, "bf_probs", None)
+        if bf_probs and bf_odds:
+            bf_items = []
+            for score, prob in bf_probs.items():
+                if score in bf_odds:
+                    actual_odds = bf_odds[score]
+                    if actual_odds > 2.0 and prob > 0.05:
+                        fair_odds = 1 / prob
+                        edge = (actual_odds - fair_odds) / fair_odds
+                        bf_items.append((score, prob, actual_odds, edge))
+            bf_items.sort(key=lambda x: x[3], reverse=True)
+            for score, prob, actual_odds, edge in bf_items[:5]:
+                kf, suggested_stake = _calc_kelly_stake(prob, actual_odds)
+                if suggested_stake > 5:
+                    plans.append({
+                        "play_type": "BF",
+                        "selection": score,
+                        "probability": round(prob, 4),
+                        "odds": actual_odds,
+                        "edge": round(edge * 100, 1),
+                        "kelly_fraction": round(kf, 4),
+                        "suggested_stake": suggested_stake,
+                        "expected_value": round(suggested_stake * edge, 2),
+                        "risk_level": "高",
+                    })
+
+        # --- BQC 半全场 (Top 3 results) ---
+        bqc_info = official_odds.get("bqc", {})
+        bqc_odds = bqc_info.get("odds", {})
+        bqc_probs = getattr(analysis, "bqc_probs", None)
+        if bqc_probs and bqc_odds:
+            bqc_items = []
+            for selection, prob in bqc_probs.items():
+                if selection in bqc_odds:
+                    actual_odds = bqc_odds[selection]
+                    if actual_odds > 1.8 and prob > 0.10:
+                        fair_odds = 1 / prob
+                        edge = (actual_odds - fair_odds) / fair_odds
+                        bqc_items.append((selection, prob, actual_odds, edge))
+            bqc_items.sort(key=lambda x: x[3], reverse=True)
+            for selection, prob, actual_odds, edge in bqc_items[:3]:
+                kf, suggested_stake = _calc_kelly_stake(prob, actual_odds)
+                if suggested_stake > 10:
+                    plans.append({
+                        "play_type": "BQC",
+                        "selection": selection,
+                        "probability": round(prob, 4),
+                        "odds": actual_odds,
+                        "edge": round(edge * 100, 1),
+                        "kelly_fraction": round(kf, 4),
+                        "suggested_stake": suggested_stake,
+                        "expected_value": round(suggested_stake * edge, 2),
+                        "risk_level": "高",
+                    })
 
         # 按期望价值排序
         plans.sort(key=lambda x: x["expected_value"], reverse=True)
@@ -359,11 +478,11 @@ class SmartAdvisor:
         if strategy == "conservative":
             plans = [p for p in plans if p["risk_level"] == "低"]
         elif strategy == "aggressive":
-            plans = plans  # 保留所有
-        else:  # balanced
+            plans = plans
+        else:
             plans = [p for p in plans if p["risk_level"] in ["低", "中"]]
 
-        decision.betting_plans = plans[:5]
+        decision.betting_plans = plans[:6]
 
         if plans:
             decision.decision_rationale.append(

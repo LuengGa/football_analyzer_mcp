@@ -102,7 +102,7 @@ def register_prompts(mcp):
 - 检查木桶原则（关数受最低玩法限制）
 
 ## 第三步：计算预期奖金
-使用 `lottery_calculate_parlay_bonus` 计算预期奖金：
+使用 `lottery_calculate_bonus` 计算预期奖金：
 - 竞彩过关：2元 × 各场固定奖金连乘 × 倍数
 - 北单：2元 × SP值连乘 × 65% × 倍数
 
@@ -311,7 +311,7 @@ def register_prompts(mcp):
 
 ## 注意事项
 1. 生成投注单后，使用 `lottery_validate_parlay` 验证合法性
-2. 使用 `lottery_calculate_parlay_bonus` 计算预期收益
+2. 使用 `lottery_calculate_bonus` 计算预期收益
 3. 理性购彩，量力而行
 """
 

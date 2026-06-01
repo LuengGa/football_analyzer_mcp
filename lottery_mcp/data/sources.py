@@ -542,6 +542,11 @@ class FreeDataSourceManager:
         raw = f"{method}:{param_str}"
         return hashlib.md5(raw.encode()).hexdigest()
 
+    def _get_cached(self, cache_key: str, data_type: str = "default") -> Optional[Dict]:
+        """获取缓存，根据数据类型使用不同TTL"""
+        ttl = CACHE_TTL_BY_TYPE.get(data_type, CACHE_TTL_SECONDS)
+        return self.cache.get(cache_key, ttl=ttl)
+
     # ========================================================================
     # 国际API部分 - 积分榜
     # ========================================================================
@@ -563,7 +568,7 @@ class FreeDataSourceManager:
             season = now.year if now.month >= 8 else now.year - 1
 
         cache_key = self._cache_key("standings", league_code=league_code, season=season)
-        cached = self.cache.get(cache_key)
+        cached = self._get_cached(cache_key, "standings")
         if cached is not None:
             return make_response(source=cached.get("source", "cache"),
                                  data=cached.get("data"),
@@ -723,7 +728,7 @@ class FreeDataSourceManager:
             {"source": str, "data": {...}, "cached": bool, "remaining_quota": int}
         """
         cache_key = self._cache_key("h2h", team1=team1, team2=team2, limit=limit)
-        cached = self.cache.get(cache_key)
+        cached = self._get_cached(cache_key, "h2h")
         if cached is not None:
             return make_response(source=cached.get("source", "cache"),
                                  data=cached.get("data"),
@@ -977,7 +982,7 @@ class FreeDataSourceManager:
             {"source": str, "data": {...}, "cached": bool, "remaining_quota": int}
         """
         cache_key = self._cache_key("team_form", team_name=team_name, limit=limit)
-        cached = self.cache.get(cache_key)
+        cached = self._get_cached(cache_key, "form")
         if cached is not None:
             return make_response(source=cached.get("source", "cache"),
                                  data=cached.get("data"),
@@ -1232,7 +1237,7 @@ class FreeDataSourceManager:
             {"source": str, "data": {...}, "cached": bool, "remaining_quota": int}
         """
         cache_key = self._cache_key("injuries", team_name=team_name)
-        cached = self.cache.get(cache_key)
+        cached = self._get_cached(cache_key, "injuries")
         if cached is not None:
             return make_response(source=cached.get("source", "cache"),
                                  data=cached.get("data"),
@@ -1314,7 +1319,7 @@ class FreeDataSourceManager:
             date = datetime.now().strftime("%Y-%m-%d")
 
         cache_key = self._cache_key("fixtures", league_code=league_code, date=date)
-        cached = self.cache.get(cache_key)
+        cached = self._get_cached(cache_key, "schedule")
         if cached is not None:
             return make_response(source=cached.get("source", "cache"),
                                  data=cached.get("data"),
@@ -1456,7 +1461,7 @@ class FreeDataSourceManager:
             {"source": str, "data": {...}, "cached": bool, "remaining_quota": int}
         """
         cache_key = self._cache_key("market_odds", match_id=match_id, sport=sport, league=league)
-        cached = self.cache.get(cache_key)
+        cached = self._get_cached(cache_key, "market_odds")
         if cached is not None:
             return make_response(source=cached.get("source", "cache"),
                                  data=cached.get("data"),
@@ -1818,7 +1823,7 @@ class FreeDataSourceManager:
             {"source": str, "data": {...}, "cached": bool, "remaining_quota": int}
         """
         cache_key = self._cache_key("lottery_odds_change", match_id=match_id)
-        cached = self.cache.get(cache_key)
+        cached = self._get_cached(cache_key, "odds")
         if cached is not None:
             return make_response(source=cached.get("source", "cache"),
                                  data=cached.get("data"),
@@ -2060,7 +2065,7 @@ class FreeDataSourceManager:
             {"source": str, "data": {...}, "cached": bool}
         """
         cache_key = self._cache_key("match_head", match_id=match_id)
-        cached = self.cache.get(cache_key)
+        cached = self._get_cached(cache_key, "default")
         if cached:
             return make_response(source="cache", data=cached, cached=True)
 
@@ -2087,7 +2092,7 @@ class FreeDataSourceManager:
             {"source": str, "data": {...}, "cached": bool}
         """
         cache_key = self._cache_key("match_feature", match_id=match_id, term=term_limits)
-        cached = self.cache.get(cache_key)
+        cached = self._get_cached(cache_key, "features")
         if cached:
             return make_response(source="cache", data=cached, cached=True)
 
@@ -2117,7 +2122,7 @@ class FreeDataSourceManager:
             {"source": str, "data": {...}, "cached": bool}
         """
         cache_key = self._cache_key("result_history", match_id=match_id, term=term_limits)
-        cached = self.cache.get(cache_key)
+        cached = self._get_cached(cache_key, "h2h")
         if cached:
             return make_response(source="cache", data=cached, cached=True)
 
@@ -2148,7 +2153,7 @@ class FreeDataSourceManager:
             {"source": str, "data": {...}, "cached": bool}
         """
         cache_key = self._cache_key("match_tables", match_id=match_id)
-        cached = self.cache.get(cache_key)
+        cached = self._get_cached(cache_key, "default")
         if cached:
             return make_response(source="cache", data=cached, cached=True)
 
@@ -2175,7 +2180,7 @@ class FreeDataSourceManager:
             {"source": str, "data": {...}, "cached": bool}
         """
         cache_key = self._cache_key("match_recent_form", match_id=match_id, term=term_limits)
-        cached = self.cache.get(cache_key)
+        cached = self._get_cached(cache_key, "form")
         if cached:
             return make_response(source="cache", data=cached, cached=True)
 
@@ -2207,7 +2212,7 @@ class FreeDataSourceManager:
             {"source": str, "data": {...}, "cached": bool}
         """
         cache_key = self._cache_key("future_matches", match_id=match_id, term=term_limits)
-        cached = self.cache.get(cache_key)
+        cached = self._get_cached(cache_key, "default")
         if cached:
             return make_response(source="cache", data=cached, cached=True)
 
@@ -2234,7 +2239,7 @@ class FreeDataSourceManager:
             {"source": str, "data": {...}, "cached": bool}
         """
         cache_key = self._cache_key("match_players", match_id=match_id, term=term_limits)
-        cached = self.cache.get(cache_key)
+        cached = self._get_cached(cache_key, "default")
         if cached:
             return make_response(source="cache", data=cached, cached=True)
 
@@ -2260,7 +2265,7 @@ class FreeDataSourceManager:
             {"source": str, "data": {...}, "cached": bool}
         """
         cache_key = self._cache_key("injury_suspension", match_id=match_id)
-        cached = self.cache.get(cache_key)
+        cached = self._get_cached(cache_key, "injuries")
         if cached:
             return make_response(source="cache", data=cached, cached=True)
 
@@ -2294,7 +2299,7 @@ class FreeDataSourceManager:
             date = datetime.now().strftime("%Y-%m-%d")
 
         cache_key = self._cache_key("lottery_results", date=date)
-        cached = self.cache.get(cache_key)
+        cached = self._get_cached(cache_key, "results")
         if cached is not None:
             return make_response(source=cached.get("source", "cache"),
                                  data=cached.get("data"),
@@ -2500,7 +2505,7 @@ class FreeDataSourceManager:
             - reference_odds: 参考赔率 (from sporttery.cn API, 可能不可用)
         """
         cache_key = self._cache_key("ctzc_results", expect=expect, lottery_type=lottery_type)
-        cached = self.cache.get(cache_key)
+        cached = self._get_cached(cache_key, "results")
         if cached is not None:
             return make_response(source=cached.get("source", "cache"),
                                  data=cached.get("data"),
@@ -3013,7 +3018,7 @@ class FreeDataSourceManager:
             {"source": str, "data": {...}, "cached": bool, "remaining_quota": int}
         """
         cache_key = self._cache_key("ctzc_matches", expect=expect)
-        cached = self.cache.get(cache_key)
+        cached = self._get_cached(cache_key, "default")
         if cached is not None:
             return make_response(source=cached.get("source", "cache"),
                                  data=cached.get("data"),
@@ -3107,7 +3112,7 @@ class FreeDataSourceManager:
             {"source": str, "data": {...}, "cached": bool, "remaining_quota": int}
         """
         cache_key = self._cache_key("beidan_results")
-        cached = self.cache.get(cache_key)
+        cached = self._get_cached(cache_key, "results")
         if cached is not None:
             return make_response(source=cached.get("source", "cache"),
                                  data=cached.get("data"),
@@ -3343,7 +3348,7 @@ class FreeDataSourceManager:
             {"source": str, "data": {...}, "cached": bool, "remaining_quota": int}
         """
         cache_key = self._cache_key("beidan_matches")
-        cached = self.cache.get(cache_key)
+        cached = self._get_cached(cache_key, "default")
         if cached is not None:
             return make_response(source=cached.get("source", "cache"),
                                  data=cached.get("data"),
@@ -3434,7 +3439,7 @@ class FreeDataSourceManager:
               - kelly_analysis: 凯利指数分析
         """
         cache_key = self._cache_key("compare_odds", match_id=match_id)
-        cached = self.cache.get(cache_key)
+        cached = self._get_cached(cache_key, "odds")
         if cached is not None:
             return make_response(source=cached.get("source", "cache"),
                                  data=cached.get("data"),

@@ -606,34 +606,28 @@ TEAM_NAME_MAPPING = {
 
 def normalize_team_name(name: str) -> str:
     """标准化球队名称用于匹配"""
-    # 移除常见后缀
-    suffixes = ["队", "FC", "CF", "United", "City"]
     name = name.strip()
-    for suffix in suffixes:
+    safe_suffixes = ["队", "FC", "CF", "SC", "AC", "FK", "BK", "CD", "SV"]
+    for suffix in safe_suffixes:
         if name.endswith(suffix):
             name = name[:-len(suffix)].strip()
     return name.lower()
 
 def match_team_name(cn_name: str, en_name: str) -> bool:
     """匹配中英文球队名称"""
-    # 直接映射匹配
     if cn_name in TEAM_NAME_MAPPING:
         mapped = TEAM_NAME_MAPPING[cn_name]
         if mapped.lower() in en_name.lower() or en_name.lower() in mapped.lower():
             return True
 
-    # 标准化后包含匹配
     cn_norm = normalize_team_name(cn_name)
     en_norm = normalize_team_name(en_name)
 
-    # 中文名包含在英文名中，或反之
     if cn_norm in en_norm or en_norm in cn_norm:
         return True
 
-    # 部分匹配（如 "Manchester" 匹配 "Man"）
-    if len(cn_norm) >= 4 and cn_norm[:4] in en_norm:
-        return True
-    if len(en_norm) >= 4 and en_norm[:4] in cn_norm:
+    min_len = min(len(cn_norm), len(en_norm))
+    if min_len >= 6 and (cn_norm[:6] == en_norm[:6]):
         return True
 
     return False
