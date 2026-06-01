@@ -1789,4 +1789,82 @@ def register_prediction_tools(mcp):
             logger.error(traceback.format_exc())
             raise_tool_error(f"分析失败: {str(e)}")
     
-    logger.info("专业版工具注册完成：9个工具（完整分析+预测报告+智能投注+玩法推荐+混合过关+高级玩法分析+历史数据分析+高级深化+完整ML）")
+    @mcp.tool(
+        name="lottery_strategy_backtest",
+        description=(
+            "【策略回测工具】运行历史策略回测，验证投注策略有效性。\n\n"
+            "功能：\n"
+            "1. 历史回测引擎：基于模拟历史数据验证策略胜率、ROI、最大回撤\n"
+            "2. 冷门价值检测：识别高价值冷门比分投注机会\n"
+            "3. 简单ML模型：基于加权特征预测主胜概率\n\n"
+            "Use when: 需要验证策略有效性、评估投注模型性能时。\n\n"
+            "Workflow: 可独立使用，也可配合 analyze_all_matches 结果进行策略验证。"
+        ),
+        annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True},
+    )
+    async def _lottery_strategy_backtest(ctx: Context) -> str:
+        try:
+            await ctx.log_info("运行策略回测分析...")
+            from lottery_mcp.analysis.backtest_framework import (
+                HistoricalBacktestEngine,
+                ValueBetDetector,
+                SimpleMLModel,
+            )
+
+            result = {
+                "success": True,
+                "generated_at": datetime.now().isoformat(),
+                "backtest": {},
+                "underdog_detection": {},
+                "ml_model": {},
+            }
+
+            engine = HistoricalBacktestEngine(initial_capital=100.0)
+            perf = engine.backtest_simple_strategy(use_kelly=True, kelly_fraction=0.25)
+            result["backtest"] = {
+                "total_bets": perf.total_bets,
+                "total_wins": perf.total_wins,
+                "win_rate": round(perf.win_rate * 100, 2),
+                "total_stake": round(perf.total_stake, 2),
+                "total_profit": round(perf.total_profit, 2),
+                "roi": round(perf.roi * 100, 2),
+                "max_drawdown": round(perf.max_drawdown * 100, 2),
+                "avg_odds": round(perf.avg_odds, 2),
+                "kelly_stake_used": perf.Kelly_stake_used,
+            }
+
+            mock_model_probs = {
+                "0:0": 0.08, "1:0": 0.12, "0:1": 0.10,
+                "1:1": 0.15, "2:1": 0.10, "1:2": 0.08,
+                "2:0": 0.07, "0:2": 0.06, "2:2": 0.05,
+            }
+            mock_bf_odds = {
+                "0:0": 8.8, "1:0": 6.5, "0:1": 7.0,
+                "1:1": 5.2, "2:1": 9.5, "1:2": 10.5,
+                "2:0": 12.0, "0:2": 13.5, "2:2": 16.0,
+            }
+            value_bets = ValueBetDetector.detect_underdog_bets(mock_model_probs, mock_bf_odds)
+            result["underdog_detection"] = {
+                "top_value_bets": value_bets[:5],
+                "total_candidates": len(value_bets),
+            }
+
+            ml_model = SimpleMLModel()
+            predicted_prob = ml_model.predict_win_prob(
+                home_xg=1.5, away_xg=1.0,
+                home_form=0.6, away_form=0.5,
+                h2h_home_win_rate=0.55,
+                market_implied_home_prob=0.48,
+            )
+            result["ml_model"] = {
+                "predicted_home_win_prob": round(predicted_prob * 100, 2),
+                "model_weights": ml_model.weights,
+                "is_trained": ml_model.is_trained,
+            }
+
+            return _to_json(result)
+        except Exception as e:
+            logger.error(f"策略回测失败: {e}")
+            raise_tool_error(f"策略回测失败: {str(e)}")
+
+    logger.info("专业版工具注册完成：10个工具（完整分析+预测报告+智能投注+玩法推荐+混合过关+高级玩法分析+历史数据分析+高级深化+完整ML+策略回测）")

@@ -4,6 +4,7 @@ MCP Server Data Tools - Data fetching and retrieval tools.
 使用真实数据源：lottery_data_fetcher, lottery_odds_fetcher_v2, lottery_free_data_sources
 """
 
+import asyncio
 import json
 import logging
 from datetime import datetime
@@ -247,8 +248,9 @@ async def lottery_fetch_today_matches(params: FetchTodayMatchesInput, ctx: Conte
             }
             internal_type = lottery_type_map.get(params.lottery_type, "jingcai")
             
-            # 调用真实 API
-            matches = _fetch_today_matches(
+            # 调用真实 API（使用 asyncio.to_thread 避免阻塞事件循环）
+            matches = await asyncio.to_thread(
+                _fetch_today_matches,
                 lottery_type=internal_type,
                 timeout=params.timeout or 30
             )
@@ -414,9 +416,9 @@ async def lottery_get_match_data(params: GetMatchDataInput, ctx: Context) -> str
         
         # 根据 data_type 获取不同数据
         if params.data_type in ["full", "odds"]:
-            # 获取赔率数据
+            # 获取赔率数据（使用 asyncio.to_thread 避免阻塞事件循环）
             from lottery_mcp.data.fetcher import load_odds_history
-            odds_history = load_odds_history(params.match_id)
+            odds_history = await asyncio.to_thread(load_odds_history, params.match_id)
             if odds_history:
                 match_data["odds"] = odds_history[-1]
         
@@ -970,25 +972,16 @@ async def _lottery_get_match_info(match_id: str, ctx: Context) -> str:
         
         if result.get("data"):
             data = result["data"]
-            lines = [
-                "# 比赛头部信息",
-                f"- **来源**: {result.get('source', 'sporttery.cn')}",
-                f"- **比赛ID**: {match_id}",
-            ]
-            
-            # 添加基本信息
-            home = data.get("homeTeam", {})
-            away = data.get("awayTeam", {})
-            lines.extend([
-                f"- **主队**: {home.get('cnName', '')}",
-                f"- **客队**: {away.get('cnName', '')}",
-            ])
-            
-            return "\n".join(lines)
-        return f"未找到比赛 {match_id} 的头部信息"
+            return _to_json({
+                "success": True,
+                "source": result.get("source", "sporttery.cn"),
+                "match_id": match_id,
+                "data": data,
+            })
+        return _to_json({"success": False, "error": f"未找到比赛 {match_id} 的头部信息"})
     except Exception as e:
         logger.error(f"获取比赛头部信息失败: {e}")
-        return f"获取失败: {e}"
+        return _to_json({"success": False, "error": str(e)})
 
 
 async def _lottery_get_match_features(match_id: str, term_limits: int = 10, ctx: Context = None) -> str:
@@ -1001,12 +994,16 @@ async def _lottery_get_match_features(match_id: str, term_limits: int = 10, ctx:
         result = await manager.get_match_feature(match_id, term_limits)
         
         if result.get("data"):
-            data = result["data"]
-            return "# 比赛特征分析\n\n" + json.dumps(data, ensure_ascii=False, indent=2)
-        return f"未找到比赛 {match_id} 的特征分析"
+            return _to_json({
+                "success": True,
+                "source": result.get("source"),
+                "match_id": match_id,
+                "data": result["data"],
+            })
+        return _to_json({"success": False, "error": f"未找到比赛 {match_id} 的特征分析"})
     except Exception as e:
         logger.error(f"获取比赛特征分析失败: {e}")
-        return f"获取失败: {e}"
+        return _to_json({"success": False, "error": str(e)})
 
 
 async def _lottery_get_jingcai_h2h(match_id: str, term_limits: int = 10, ctx: Context = None) -> str:
@@ -1019,12 +1016,16 @@ async def _lottery_get_jingcai_h2h(match_id: str, term_limits: int = 10, ctx: Co
         result = await manager.get_result_history(match_id, term_limits)
         
         if result.get("data"):
-            data = result["data"]
-            return "# 历史交锋\n\n" + json.dumps(data, ensure_ascii=False, indent=2)
-        return f"未找到比赛 {match_id} 的历史交锋"
+            return _to_json({
+                "success": True,
+                "source": result.get("source"),
+                "match_id": match_id,
+                "data": result["data"],
+            })
+        return _to_json({"success": False, "error": f"未找到比赛 {match_id} 的历史交锋"})
     except Exception as e:
         logger.error(f"获取历史交锋失败: {e}")
-        return f"获取失败: {e}"
+        return _to_json({"success": False, "error": str(e)})
 
 
 async def _lottery_get_match_standings(match_id: str, ctx: Context = None) -> str:
@@ -1037,12 +1038,16 @@ async def _lottery_get_match_standings(match_id: str, ctx: Context = None) -> st
         result = await manager.get_match_tables(match_id)
         
         if result.get("data"):
-            data = result["data"]
-            return "# 积分榜\n\n" + json.dumps(data, ensure_ascii=False, indent=2)
-        return f"未找到比赛 {match_id} 的积分榜"
+            return _to_json({
+                "success": True,
+                "source": result.get("source"),
+                "match_id": match_id,
+                "data": result["data"],
+            })
+        return _to_json({"success": False, "error": f"未找到比赛 {match_id} 的积分榜"})
     except Exception as e:
         logger.error(f"获取积分榜失败: {e}")
-        return f"获取失败: {e}"
+        return _to_json({"success": False, "error": str(e)})
 
 
 async def _lottery_get_recent_form(match_id: str, term_limits: int = 10, ctx: Context = None) -> str:
@@ -1055,12 +1060,16 @@ async def _lottery_get_recent_form(match_id: str, term_limits: int = 10, ctx: Co
         result = await manager.get_match_recent_form(match_id, term_limits)
         
         if result.get("data"):
-            data = result["data"]
-            return "# 近期战绩\n\n" + json.dumps(data, ensure_ascii=False, indent=2)
-        return f"未找到比赛 {match_id} 的近期战绩"
+            return _to_json({
+                "success": True,
+                "source": result.get("source"),
+                "match_id": match_id,
+                "data": result["data"],
+            })
+        return _to_json({"success": False, "error": f"未找到比赛 {match_id} 的近期战绩"})
     except Exception as e:
         logger.error(f"获取近期战绩失败: {e}")
-        return f"获取失败: {e}"
+        return _to_json({"success": False, "error": str(e)})
 
 
 async def _lottery_get_future_matches(match_id: str, term_limits: int = 4, ctx: Context = None) -> str:
@@ -1073,12 +1082,16 @@ async def _lottery_get_future_matches(match_id: str, term_limits: int = 4, ctx: 
         result = await manager.get_future_matches(match_id, term_limits)
         
         if result.get("data"):
-            data = result["data"]
-            return "# 未来赛事\n\n" + json.dumps(data, ensure_ascii=False, indent=2)
-        return f"未找到比赛 {match_id} 的未来赛事"
+            return _to_json({
+                "success": True,
+                "source": result.get("source"),
+                "match_id": match_id,
+                "data": result["data"],
+            })
+        return _to_json({"success": False, "error": f"未找到比赛 {match_id} 的未来赛事"})
     except Exception as e:
         logger.error(f"获取未来赛事失败: {e}")
-        return f"获取失败: {e}"
+        return _to_json({"success": False, "error": str(e)})
 
 
 async def _lottery_get_players(match_id: str, term_limits: int = 3, ctx: Context = None) -> str:
@@ -1091,12 +1104,16 @@ async def _lottery_get_players(match_id: str, term_limits: int = 3, ctx: Context
         result = await manager.get_match_players(match_id, term_limits)
         
         if result.get("data"):
-            data = result["data"]
-            return "# 射手信息\n\n" + json.dumps(data, ensure_ascii=False, indent=2)
-        return f"未找到比赛 {match_id} 的射手信息"
+            return _to_json({
+                "success": True,
+                "source": result.get("source"),
+                "match_id": match_id,
+                "data": result["data"],
+            })
+        return _to_json({"success": False, "error": f"未找到比赛 {match_id} 的射手信息"})
     except Exception as e:
         logger.error(f"获取射手信息失败: {e}")
-        return f"获取失败: {e}"
+        return _to_json({"success": False, "error": str(e)})
 
 
 async def _lottery_get_injury_suspension(match_id: str, ctx: Context = None) -> str:
@@ -1109,12 +1126,16 @@ async def _lottery_get_injury_suspension(match_id: str, ctx: Context = None) -> 
         result = await manager.get_injury_suspension(match_id)
         
         if result.get("data"):
-            data = result["data"]
-            return "# 伤停一览\n\n" + json.dumps(data, ensure_ascii=False, indent=2)
-        return f"未找到比赛 {match_id} 的伤停信息"
+            return _to_json({
+                "success": True,
+                "source": result.get("source"),
+                "match_id": match_id,
+                "data": result["data"],
+            })
+        return _to_json({"success": False, "error": f"未找到比赛 {match_id} 的伤停信息"})
     except Exception as e:
         logger.error(f"获取伤停信息失败: {e}")
-        return f"获取失败: {e}"
+        return _to_json({"success": False, "error": str(e)})
 
 
 # ============================================================
@@ -2144,7 +2165,7 @@ def register_jingcai_info_tools(mcp: Any):
 
 Use when: 需要获取竞彩比赛的基本信息时。
 """,
-        annotations={"readOnlyHint": True, "idempotentHint": True}
+        annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True}
     )
     async def _lottery_get_match_info(params: MatchIdInput, ctx: Context) -> str:
         return await _lottery_get_match_info(params.match_id, ctx)
@@ -2160,7 +2181,7 @@ Use when: 需要获取竞彩比赛的基本信息时。
 
 Use when: 需要了解比赛特征用于分析时。
 """,
-        annotations={"readOnlyHint": True, "idempotentHint": True}
+        annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True}
     )
     async def _lottery_get_match_features(params: MatchIdWithLimitInput, ctx: Context) -> str:
         return await _lottery_get_match_features(params.match_id, params.limit, ctx)
@@ -2176,7 +2197,7 @@ Use when: 需要了解比赛特征用于分析时。
 
 Use when: 需要查看历史交锋数据时。
 """,
-        annotations={"readOnlyHint": True, "idempotentHint": True}
+        annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True}
     )
     async def _lottery_get_jingcai_h2h(params: MatchIdWithLimitInput, ctx: Context) -> str:
         return await _lottery_get_jingcai_h2h(params.match_id, params.limit, ctx)
@@ -2192,7 +2213,7 @@ Use when: 需要查看历史交锋数据时。
 
 Use when: 需要了解球队排名情况时。
 """,
-        annotations={"readOnlyHint": True, "idempotentHint": True}
+        annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True}
     )
     async def _lottery_get_match_standings(params: MatchIdInput, ctx: Context) -> str:
         return await _lottery_get_match_standings(params.match_id, ctx)
@@ -2208,7 +2229,7 @@ Use when: 需要了解球队排名情况时。
 
 Use when: 需要了解球队近期状态时。
 """,
-        annotations={"readOnlyHint": True, "idempotentHint": True}
+        annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True}
     )
     async def _lottery_get_recent_form(params: MatchIdWithLimitInput, ctx: Context) -> str:
         return await _lottery_get_recent_form(params.match_id, params.limit, ctx)
@@ -2224,7 +2245,7 @@ Use when: 需要了解球队近期状态时。
 
 Use when: 需要查看未来赛程影响时。
 """,
-        annotations={"readOnlyHint": True, "idempotentHint": True}
+        annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True}
     )
     async def _lottery_get_future_matches(params: MatchIdWithLimitInput, ctx: Context) -> str:
         return await _lottery_get_future_matches(params.match_id, params.limit, ctx)
@@ -2240,7 +2261,7 @@ Use when: 需要查看未来赛程影响时。
 
 Use when: 需要了解球员情况时。
 """,
-        annotations={"readOnlyHint": True, "idempotentHint": True}
+        annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True}
     )
     async def _lottery_get_players(params: MatchIdWithLimitInput, ctx: Context) -> str:
         return await _lottery_get_players(params.match_id, params.limit, ctx)
@@ -2257,7 +2278,7 @@ Use when: 需要了解球员情况时。
 
 Use when: 需要了解球员伤停情况时。
 """,
-        annotations={"readOnlyHint": True, "idempotentHint": True}
+        annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True}
     )
     async def _lottery_get_injury_suspension(params: MatchIdInput, ctx: Context) -> str:
         return await _lottery_get_injury_suspension(params.match_id, ctx)

@@ -2517,8 +2517,8 @@ class FreeDataSourceManager:
         if not result:
             return make_response(source="none", data=None, error="传统足彩开奖数据获取失败")
 
-        # 2. 尝试获取参考赔率 (sporttery.cn API)
-        odds_data = self._get_ctzc_reference_odds(expect, lottery_type)
+        # 2. 尝试获取参考赔率 (sporttery.cn API) - 使用 to_thread 避免阻塞事件循环
+        odds_data = await asyncio.to_thread(self._get_ctzc_reference_odds, expect, lottery_type)
         if odds_data:
             result["data"]["reference_odds"] = odds_data
             result["data"]["odds_source"] = "sporttery.cn"

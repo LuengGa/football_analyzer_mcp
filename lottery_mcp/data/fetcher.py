@@ -425,6 +425,7 @@ def fetch_ctzc_matches(issue_number: Optional[str] = None, timeout: int = 30) ->
     获取策略（降级机制）：
     1. 优先尝试官方API
     2. API失败时，从HTML页面抓取数据
+    3. HTML失败时，尝试500.com备用数据源
     
     Args:
         issue_number: 期号（如"26075"），不传则获取最新期
@@ -449,8 +450,16 @@ def fetch_ctzc_matches(issue_number: Optional[str] = None, timeout: int = 30) ->
     except Exception:
         pass
     
+    # 策略3: 500.com 备用数据源
+    try:
+        result = _fetch_ctzc_from_500(timeout)
+        if result:
+            return result
+    except Exception:
+        pass
+    
     raise ConnectionError(
-        "获取传统足彩数据失败：官方API和HTML页面均不可用。"
+        "获取传统足彩数据失败：官方API、HTML页面和500.com备用源均不可用。"
         "请稍后重试，或访问 https://www.sporttery.cn/ctzc/szsc/index.html 手动查看。"
     )
 
@@ -530,11 +539,12 @@ def _fetch_ctzc_from_api(issue_number: Optional[str] = None, timeout: int = 30) 
     return results
 
 
-def _fetch_ctzc_from_html(timeout: int = 30) -> List[Dict[str, Any]]:
+def _fetch_ctzc_from_html(timeout: int = 30, max_retries: int = 3) -> List[Dict[str, Any]]:
     """
     降级方案：从传统足彩HTML页面抓取赛程数据。
     
     数据来源: https://www.sporttery.cn/ctzc/szsc/index.html
+    含重试机制和完整异常处理。
     """
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
@@ -544,13 +554,24 @@ def _fetch_ctzc_from_html(timeout: int = 30) -> List[Dict[str, Any]]:
     }
     
     ctx = create_ssl_context()
-    
-    # 尝试从HTML页面获取数据
     url = "https://www.sporttery.cn/ctzc/szsc/index.html"
-    req = urllib.request.Request(url, headers=headers)
     
-    with urllib.request.urlopen(req, timeout=timeout, context=ctx) as resp:
-        html = resp.read().decode('utf-8', errors='replace')
+    html = None
+    for attempt in range(max_retries):
+        try:
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=timeout, context=ctx) as resp:
+                html = resp.read().decode('utf-8', errors='replace')
+            break
+        except (urllib.error.HTTPError, urllib.error.URLError, OSError, TimeoutError) as e:
+            if attempt < max_retries - 1:
+                wait = 1.5 ** attempt
+                time.sleep(wait)
+        except Exception as e:
+            continue
+    
+    if html is None:
+        return []
     
     # 尝试从HTML中提取内嵌的JSON数据
     # sporttery.cn 通常在页面中嵌入 matchData 或类似变量
@@ -585,6 +606,60 @@ def _fetch_ctzc_from_html(timeout: int = 30) -> List[Dict[str, Any]]:
     if matches:
         return matches
     
+    return []
+
+
+def _fetch_ctzc_from_500(timeout: int = 30, max_retries: int = 2) -> List[Dict[str, Any]]:
+    """
+    备用方案：从 500.com 获取传统足彩对阵数据。
+    
+    数据来源: https://trade.500.com/ctzc/
+    含重试机制和完整异常处理。
+    """
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+        'Referer': 'https://trade.500.com/',
+    }
+
+    ctx = create_ssl_context()
+    url = "https://trade.500.com/ctzc/"
+
+    html = None
+    for attempt in range(max_retries):
+        try:
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=timeout, context=ctx) as resp:
+                html = resp.read().decode('gb2312', errors='replace')
+            break
+        except (urllib.error.HTTPError, urllib.error.URLError, OSError, TimeoutError):
+            if attempt < max_retries - 1:
+                time.sleep(1.5 ** attempt)
+        except Exception:
+            continue
+
+    if html is None:
+        return []
+
+    json_patterns = [
+        r'var\s+matchData\s*=\s*(\[.*?\]);',
+        r'var\s+matchList\s*=\s*(\[.*?\]);',
+        r'data-match\s*=\s*(\[.*?\])',
+        r'"matchList"\s*:\s*(\[.*?\])',
+    ]
+
+    for pattern in json_patterns:
+        match = re.search(pattern, html, re.DOTALL)
+        if match:
+            try:
+                json_str = match.group(1)
+                data = json.loads(json_str)
+                if isinstance(data, list):
+                    return [_parse_ctzc_html_match(m, "500.com") for m in data]
+            except (json.JSONDecodeError, KeyError, TypeError):
+                continue
+
     return []
 
 
