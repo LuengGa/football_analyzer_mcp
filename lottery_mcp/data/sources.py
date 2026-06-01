@@ -148,6 +148,28 @@ THE_ODDS_API_LEAGUE_MAP = {
     "意甲": "serie_a", "Serie A": "serie_a",
     "法甲": "ligue_1", "Ligue 1": "ligue_1",
     "欧冠": "uefa_champions_league", "Champions League": "uefa_champions_league",
+    "葡超": "portuguese_primeira_liga", "Primeira Liga": "portuguese_primeira_liga",
+    "荷甲": "dutch_eredivisie", "Eredivisie": "dutch_eredivisie",
+    "苏超": "scottish_premiership", "Scottish Premiership": "scottish_premiership",
+    "土超": "turkish_super_lig", "Super Lig": "turkish_super_lig",
+    "俄超": "russian_premier_league", "Russian Premier League": "russian_premier_league",
+    "巴甲": "brazilian_serie_a", "Brasileirao": "brazilian_serie_a",
+    "阿甲": "argentine_primera_division", "Argentine Primera": "argentine_primera_division",
+    "澳超": "australian_a_league", "A-League": "australian_a_league",
+    "丹超": "danish_superliga", "Danish Superliga": "danish_superliga",
+    "比甲": "belgian_first_division_a", "Belgian Pro League": "belgian_first_division_a",
+    "希腊超": "greek_super_league", "Super League Greece": "greek_super_league",
+    "瑞士超": "swiss_super_league", "Swiss Super League": "swiss_super_league",
+    "奥超": "austrian_bundesliga", "Austrian Bundesliga": "austrian_bundesliga",
+    "墨超": "mexican_liga_mx", "Liga MX": "mexican_liga_mx",
+    "日职": "japanese_j1_league", "J1 League": "japanese_j1_league",
+    "K联赛": "south_korean_k_league_1", "K League 1": "south_korean_k_league_1",
+    "MLS": "american_major_league_soccer", "Major League Soccer": "american_major_league_soccer",
+    "瑞典超": "swedish_allsvenskan", "Allsvenskan": "swedish_allsvenskan",
+    "挪威超": "norwegian_eliteserien", "Eliteserien": "norwegian_eliteserien",
+    "英冠": "english_championship", "Championship": "english_championship",
+    "欧联": "uefa_europa_league", "Europa League": "uefa_europa_league",
+    "欧协联": "uefa_conference_league", "Conference League": "uefa_conference_league",
 }
 
 
@@ -2296,28 +2318,108 @@ class FreeDataSourceManager:
 
     async def _get_lottery_results_from_500(self, date: str) -> Optional[Dict]:
         """从 500.com 获取竞彩赛果"""
-        # 500.com 竞彩开奖页面
-        date_formatted = date.replace("-", "")
-        url = f"https://zx.500.com/jczq/kaijiang.php?date={date_formatted}"
+        import re
+
+        url = f"https://zx.500.com/jczq/kaijiang.php?d={date}"
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
             "Accept": "text/html,application/xhtml+xml",
             "Accept-Language": "zh-CN,zh;q=0.9",
         }
 
-        resp = await self.http.get(url, headers=headers)
+        resp = await self.http.get_html(url, headers=headers, encoding="gb2312")
         if not resp["ok"]:
             return None
 
-        # 500.com 返回HTML，需要解析
-        # 这里返回原始HTML标记，实际使用时可用 BeautifulSoup 解析
+        raw_html = resp["data"]
+        if not isinstance(raw_html, str):
+            return None
+
+        idx = raw_html.find('class="ld_table"')
+        if idx < 0:
+            return None
+
+        table_start = raw_html.rfind("<table", 0, idx)
+        if table_start < 0:
+            return None
+
+        depth = 1
+        pos = table_start + 6
+        while pos < len(raw_html) and depth > 0:
+            next_open = raw_html.find("<table", pos)
+            next_close = raw_html.find("</table>", pos)
+            if next_close < 0:
+                break
+            if next_open >= 0 and next_open < next_close:
+                depth += 1
+                pos = next_open + 6
+            else:
+                depth -= 1
+                pos = next_close + 8
+
+        ld_table_html = raw_html[table_start:pos]
+
+        clean_html = re.sub(
+            r"<table[^>]*>.*?</table>", "", ld_table_html, flags=re.DOTALL
+        )
+
+        results = []
+        trs = re.findall(r"<tr[^>]*>(.*?)</tr>", clean_html, re.DOTALL)
+        for tr in trs:
+            if "<th" in tr:
+                continue
+
+            tds = re.findall(r"<td[^>]*>(.*?)</td>", tr, re.DOTALL)
+            if len(tds) < 19:
+                continue
+
+            def _clean(td):
+                text = re.sub(r"<[^>]+>", "", td).strip()
+                return text.replace("&nbsp;", "").strip()
+
+            score_raw = _clean(tds[6])
+            half_score = ""
+            full_score = ""
+            sm = re.search(r"\((\d+:\d+)\)\s*(\d+:\d+)", score_raw)
+            if sm:
+                half_score = sm.group(1)
+                full_score = sm.group(2)
+
+            odds_data = {}
+            for key, td_idx in [("rqspf", 9), ("spf", 12), ("zjq", 15), ("bqc", 18)]:
+                val = _clean(tds[td_idx])
+                if val and val != "--":
+                    try:
+                        odds_data[key] = float(val)
+                    except ValueError:
+                        odds_data[key] = val
+
+            match_result = {
+                "match_id": _clean(tds[0]),
+                "league": _clean(tds[1]),
+                "match_time": _clean(tds[2]),
+                "home_team": _clean(tds[3]),
+                "away_team": _clean(tds[5]),
+                "handicap": _clean(tds[4]),
+                "score": full_score,
+                "half_score": half_score,
+                "spf_result": _clean(tds[11]),
+                "rqspf_result": _clean(tds[8]),
+                "zjq_result": _clean(tds[14]),
+                "bqc_result": _clean(tds[17]),
+                "odds_data": odds_data if odds_data else None,
+            }
+            results.append(match_result)
+
+        if not results:
+            return None
+
         return {
             "source": "500.com",
             "data": {
                 "date": date,
-                "raw_html": resp["data"][:2000] if isinstance(resp["data"], str) else str(resp["data"])[:2000],
-                "note": "HTML数据需要使用BeautifulSoup解析，此处返回原始内容前2000字符",
-                "parse_required": True,
+                "total_matches": len(results),
+                "results": results,
             },
             "remaining": -1,
         }

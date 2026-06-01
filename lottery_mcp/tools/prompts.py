@@ -102,7 +102,7 @@ def register_prompts(mcp):
 - 检查木桶原则（关数受最低玩法限制）
 
 ## 第三步：计算预期奖金
-使用 `lottery_calculate_bonus` 计算预期奖金：
+使用 `lottery_calculate_parlay_bonus` 计算预期奖金：
 - 竞彩过关：2元 × 各场固定奖金连乘 × 倍数
 - 北单：2元 × SP值连乘 × 65% × 倍数
 
@@ -307,11 +307,11 @@ def register_prompts(mcp):
 - 单注金额：2元
 
 ## 使用凯利公式
-使用 `lottery_optimize_stakes` 基于凯利公式计算最优投注比例
+使用 `lottery_generate_kelly_slips` 基于凯利公式计算最优投注比例
 
 ## 注意事项
 1. 生成投注单后，使用 `lottery_validate_parlay` 验证合法性
-2. 使用 `lottery_calculate_bonus` 计算预期收益
+2. 使用 `lottery_calculate_parlay_bonus` 计算预期收益
 3. 理性购彩，量力而行
 """
 
@@ -336,14 +336,14 @@ def register_prompts(mcp):
 4. 使用 `lottery_predict_with_model` 获取模型预测概率
 5. 使用 `lottery_find_value_bets` 识别价值投注机会
 6. 使用 `lottery_track_odds_changes` 追踪赔率变化，检测异常信号
-7. 使用 `lottery_quantify_injury_impact` 评估伤停影响
+7. 使用 `lottery_get_injury_suspension` 评估伤停影响
 
 ## 风险评估阶段
 8. 使用 `lottery_assess_risk` 进行多维度风险评估
-9. 使用 `lottery_simulate_scenarios` 模拟关键情景
+9. 使用 `lottery_analyze_match` 模拟关键情景
 
 ## 决策形成阶段
-10. 使用 `lottery_generate_recommendation` 生成综合建议
+10. 使用 `lottery_get_daily_recommendations` 生成综合建议
 11. 【强制】使用 `lottery_validate_scenario` 验证建议是否符合规则
 
 ## 输出要求
@@ -382,7 +382,7 @@ def register_prompts(mcp):
 
 ## 第三步：独立思考
 7. 假设主流观点是错的，什么情况下会成立？
-8. 使用 `lottery_simulate_scenarios` 测试反方情景
+8. 使用 `lottery_analyze_match` 测试反方情景
 9. 使用 `lottery_find_value_bets` 计算逆向选择的期望值
 
 ## 第四步：风险评估
@@ -691,7 +691,7 @@ def register_prompts(mcp):
 - emergency（紧急）：异常行为检测
 
 ### 第三步：违规拦截
-使用 `lottery_reject` 对严重违规操作执行强制拒绝：
+使用 `lottery_enforce_constraints` 对严重违规操作执行强制拒绝：
 - 明确记录拒绝原因
 - 标注违规场景类型
 - 用于后续审计追踪

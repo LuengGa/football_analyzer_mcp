@@ -79,7 +79,7 @@ def register_workflow_tools(mcp):
         if ctx:
             await ctx.report_progress(0.0, "初始化工作流...")
 
-        # 工作流完整步骤 - 包含竞彩资讯工具调用
+        # 工作流完整步骤 - 包含竞彩资讯工具调用 + AI安全协议
         workflow_steps = [
             {
                 "step": 1,
@@ -95,17 +95,15 @@ def register_workflow_tools(mcp):
             {
                 "step": 2,
                 "name": "获取竞彩比赛资讯",
-                "tool": "lottery_get_match_info / lottery_get_match_features / lottery_get_jingcai_h2h / lottery_get_match_standings",
+                "tool": "lottery_get_match_info / lottery_get_match_features / lottery_get_jingcai_h2h / lottery_get_match_standings / lottery_get_recent_form / lottery_get_injury_suspension",
                 "params": {"match_id": "从第一步获取的比赛ID中选择"},
-                "description": "对感兴趣的比赛获取详细资讯：特征分析、历史交锋、积分榜等（强烈推荐）"
+                "description": "对感兴趣的比赛获取详细资讯：特征分析、历史交锋、积分榜、近期战绩、伤停等（强烈推荐）"
             },
             {
                 "step": 3,
                 "name": "获取市场赔率对比",
                 "tool": "lottery_get_market_odds",
-                "params": {
-                    "market_types": ["all"]
-                },
+                "params": {"market_types": ["all"]},
                 "description": "获取国际市场赔率（欧赔、亚盘、大小球）用于价值对比分析（推荐）"
             },
             {
@@ -117,14 +115,14 @@ def register_workflow_tools(mcp):
             },
             {
                 "step": 5,
-                "name": "智能顾问深度分析 【NEW - MCP大脑】",
+                "name": "智能顾问深度分析",
                 "tool": "lottery_advisor_analysis",
                 "params": {"match_id": "具体比赛ID"},
                 "description": "【强烈推荐】5层综合分析：赔率+模型+基本面+市场+风险矩阵，自动整合竞彩资讯和第三方数据，输出概率校准、价值发现、投注方案"
             },
             {
                 "step": 6,
-                "name": "分析比赛数据",
+                "name": "批量分析比赛",
                 "tool": "lottery_analyze_all_matches / lottery_analyze_match",
                 "params": {},
                 "description": "批量分析所有比赛（可选，建议先用advisor获得深度判断）"
@@ -150,12 +148,38 @@ def register_workflow_tools(mcp):
             },
             {
                 "step": 9,
-                "name": "风险评估",
-                "tool": "lottery_validate_scenario / lottery_rule_guard",
-                "params": {
-                    "planned_bet_amount": bankroll
-                },
-                "description": "对投注方案进行全面风险评估和合规性检查（推荐）"
+                "name": "AI推理安全验证",
+                "tool": "lottery_enforce_constraints",
+                "params": {"bet_proposal": "从第八步生成的投注方案"},
+                "description": "【强制】对AI生成的投注方案进行23条硬性约束验证，防止幻觉推理"
+            },
+            {
+                "step": 10,
+                "name": "资金健康检查",
+                "tool": "lottery_check_bankroll_health",
+                "params": {"bankroll": bankroll, "initial_bankroll": bankroll},
+                "description": "【强制】检查资金状态是否健康，是否触发止损/回撤警报"
+            },
+            {
+                "step": 11,
+                "name": "比赛截止检查",
+                "tool": "lottery_check_match_deadline",
+                "params": {"match_time": "每场比赛的截止时间"},
+                "description": "【强制】检查所有涉及比赛是否还能投注"
+            },
+            {
+                "step": 12,
+                "name": "规则验证",
+                "tool": "lottery_validate_parlay / lottery_validate_scenario",
+                "params": {},
+                "description": "验证投注方案的规则合规性"
+            },
+            {
+                "step": 13,
+                "name": "风控守卫",
+                "tool": "lottery_rule_guard",
+                "params": {"planned_bet_amount": bankroll},
+                "description": "最终风控检查，确保投注安全"
             }
         ]
 
@@ -258,11 +282,16 @@ def register_workflow_tools(mcp):
 
 ## 建议步骤
 
-1. **lottery_fetch_today_matches** - 先获取今日比赛列表
-2. **lottery_analyze_all_matches** - 对比赛进行快速分析
-3. **lottery_get_daily_recommendations** - 获取每日推荐
+1. **lottery_fetch_today_matches** - 获取今日比赛列表
+2. **lottery_get_daily_recommendations** - 获取每日推荐
+3. **lottery_analyze_all_matches** - 对比赛进行快速分析
 
-这样您可以快速获得今天的比赛概览和推荐！
+## ⚠️ 注意
+即使快速扫描，也需要在给出任何投注建议前调用：
+- **lottery_enforce_constraints** - 约束验证
+- **lottery_check_bankroll_health** - 资金检查
+
+这样可以快速获得今天的比赛概览和推荐！
 """
 
     # ============================================================
@@ -296,11 +325,25 @@ def register_workflow_tools(mcp):
 
         return f"""# 全面风险评估工作流
 
-## 建议步骤
+## 建议步骤（按顺序执行）
 
-1. **lottery_validate_scenario** - 场景验证（投注金额：{planned_bet_amount} 元）
-2. **lottery_rule_guard** - 规则守卫检查
-3. **lottery_explain_rule** - 如有需要，查询具体规则
+### 阶段一：约束验证
+1. **lottery_enforce_constraints** - 对投注方案进行23条硬性约束验证
+   - 如果 approved=false，必须拒绝该方案
+
+### 阶段二：资金检查
+2. **lottery_check_bankroll_health** - 检查资金健康状态
+   - 参数：bankroll={planned_bet_amount}，initial_bankroll={planned_bet_amount}
+   - 如果 can_continue=false，必须停止投注
+
+### 阶段三：比赛截止
+3. **lottery_check_match_deadline** - 检查所有比赛是否还能投注
+   - 如果 can_bet=false，该比赛不能包含在投注方案中
+
+### 阶段四：规则验证
+4. **lottery_validate_scenario** - 场景验证（投注金额：{planned_bet_amount} 元）
+5. **lottery_rule_guard** - 规则守卫检查
+6. **lottery_explain_rule** - 如有需要，查询具体规则
 
 这样可以确保您的投注方案安全合规！
 """
@@ -332,8 +375,8 @@ def register_workflow_tools(mcp):
         workflows = [
             {
                 "id": "lottery_full_analysis_and_betting",
-                "name": "完整分析 + 投注单",
-                "description": "一站式解决方案，从数据获取到投注单生成",
+                "name": "完整分析 + 投注单 (13步)",
+                "description": "一站式解决方案，从数据获取→分析→推荐→约束验证→风控，13步完整流程",
                 "use_cases": [
                     "帮我分析今天的比赛",
                     "推荐投注方案",
@@ -343,7 +386,7 @@ def register_workflow_tools(mcp):
             {
                 "id": "lottery_quick_scan_and_recommend",
                 "name": "快速扫描 + 推荐",
-                "description": "快速获取今日比赛概览",
+                "description": "快速获取今日比赛概览（含约束验证提醒）",
                 "use_cases": [
                     "快速看看今天有什么好机会",
                     "今天有什么推荐",
@@ -351,8 +394,8 @@ def register_workflow_tools(mcp):
             },
             {
                 "id": "lottery_comprehensive_risk_assessment",
-                "name": "全面风险评估",
-                "description": "检查风险和合规性",
+                "name": "全面风险评估 (4阶段)",
+                "description": "4阶段风控：约束验证→资金检查→比赛截止→规则验证",
                 "use_cases": [
                     "这个方案风险怎么样",
                     "检查一下安全性",
