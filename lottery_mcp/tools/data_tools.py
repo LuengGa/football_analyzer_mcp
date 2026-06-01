@@ -2040,16 +2040,13 @@ async def lottery_get_live_odds(params: Any, ctx: Context) -> str:
         滚球盘数据（JSON格式）
     """
     try:
-        from lottery_mcp.models import (
-            GetLiveOddsInput,
-        )
-        
-        # 验证参数
-        if not isinstance(params, GetLiveOddsInput):
-            params = GetLiveOddsInput(**params) if isinstance(params, dict) else GetLiveOddsInput()
-        
-        league = params.league
-        source = params.source
+        # params 可以是 Pydantic model 或 dict，由 wrapper 层保证类型
+        if isinstance(params, dict):
+            league = params.get('league')
+            source = params.get('source', 'auto')
+        else:
+            league = getattr(params, 'league', None)
+            source = getattr(params, 'source', 'auto')
         
         logger.info(f"获取滚球盘数据: league={league}, source={source}")
         
@@ -2167,7 +2164,7 @@ Use when: 需要获取竞彩比赛的基本信息时。
 """,
         annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True}
     )
-    async def _lottery_get_match_info(params: MatchIdInput, ctx: Context) -> str:
+    async def _wrap_lottery_get_match_info(params: MatchIdInput, ctx: Context) -> str:
         return await _lottery_get_match_info(params.match_id, ctx)
     
     @mcp.tool(
@@ -2183,7 +2180,7 @@ Use when: 需要了解比赛特征用于分析时。
 """,
         annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True}
     )
-    async def _lottery_get_match_features(params: MatchIdWithLimitInput, ctx: Context) -> str:
+    async def _wrap_lottery_get_match_features(params: MatchIdWithLimitInput, ctx: Context) -> str:
         return await _lottery_get_match_features(params.match_id, params.limit, ctx)
     
     @mcp.tool(
@@ -2199,7 +2196,7 @@ Use when: 需要查看历史交锋数据时。
 """,
         annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True}
     )
-    async def _lottery_get_jingcai_h2h(params: MatchIdWithLimitInput, ctx: Context) -> str:
+    async def _wrap_lottery_get_jingcai_h2h(params: MatchIdWithLimitInput, ctx: Context) -> str:
         return await _lottery_get_jingcai_h2h(params.match_id, params.limit, ctx)
     
     @mcp.tool(
@@ -2215,7 +2212,7 @@ Use when: 需要了解球队排名情况时。
 """,
         annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True}
     )
-    async def _lottery_get_match_standings(params: MatchIdInput, ctx: Context) -> str:
+    async def _wrap_lottery_get_match_standings(params: MatchIdInput, ctx: Context) -> str:
         return await _lottery_get_match_standings(params.match_id, ctx)
     
     @mcp.tool(
@@ -2231,7 +2228,7 @@ Use when: 需要了解球队近期状态时。
 """,
         annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True}
     )
-    async def _lottery_get_recent_form(params: MatchIdWithLimitInput, ctx: Context) -> str:
+    async def _wrap_lottery_get_recent_form(params: MatchIdWithLimitInput, ctx: Context) -> str:
         return await _lottery_get_recent_form(params.match_id, params.limit, ctx)
     
     @mcp.tool(
@@ -2247,7 +2244,7 @@ Use when: 需要查看未来赛程影响时。
 """,
         annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True}
     )
-    async def _lottery_get_future_matches(params: MatchIdWithLimitInput, ctx: Context) -> str:
+    async def _wrap_lottery_get_future_matches(params: MatchIdWithLimitInput, ctx: Context) -> str:
         return await _lottery_get_future_matches(params.match_id, params.limit, ctx)
     
     @mcp.tool(
@@ -2263,7 +2260,7 @@ Use when: 需要了解球员情况时。
 """,
         annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True}
     )
-    async def _lottery_get_players(params: MatchIdWithLimitInput, ctx: Context) -> str:
+    async def _wrap_lottery_get_players(params: MatchIdWithLimitInput, ctx: Context) -> str:
         return await _lottery_get_players(params.match_id, params.limit, ctx)
 
     @mcp.tool(
@@ -2280,7 +2277,7 @@ Use when: 需要了解球员伤停情况时。
 """,
         annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True}
     )
-    async def _lottery_get_injury_suspension(params: MatchIdInput, ctx: Context) -> str:
+    async def _wrap_lottery_get_injury_suspension(params: MatchIdInput, ctx: Context) -> str:
         return await _lottery_get_injury_suspension(params.match_id, ctx)
 
     logger.info("竞彩资讯工具注册完成：共8个工具")
