@@ -1,0 +1,45 @@
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Cache
+.cache/
+*.log
+
+# Environment
+.env
+.env.api_keys
+
+# Zip archives (keep original full archive for backup, but can exclude others if needed)
+# football_analyzer_mcp_*.zip

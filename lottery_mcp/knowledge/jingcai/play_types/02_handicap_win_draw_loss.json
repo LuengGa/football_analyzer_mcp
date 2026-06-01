@@ -1,0 +1,155 @@
+{
+  "version": "3.0",
+  "lottery_type": "JINGCAI",
+  "play_type": "让球胜平负",
+  "id": "handicap_win_draw_loss",
+  "name": "让球胜平负",
+  "description": "竞猜主队加减让球数后的胜平负结果，必须让球，2013年6月4日后成为独立玩法",
+  "options": ["胜", "平", "负"],
+  "options_count": 3,
+  "options_detail": {
+    "胜": "主队让球后胜",
+    "平": "主队让球后平",
+    "负": "主队让球后负"
+  },
+  "max_legs": 8,
+  "max_legs_detail": "最多可选8关（中国体彩网官方规则）",
+  "is_independent": true,
+  "can_mix": true,
+  "can_single": true,
+  "handicap_type": "integer",
+  "handicap_desc": "整数让球",
+  "handicap_range": ["让1球(-1)", "让2球(-2)", "让3球(-3)", "受让1球(+1)", "受让2球(+2)", "受让3球(+3)"],
+  "handicap_rules": {
+    "主队让1球": {
+      "胜": "主队得分 - 客队得分 > 1",
+      "平": "主队得分 - 客队得分 = 1",
+      "负": "主队得分 - 客队得分 < 1"
+    },
+    "客队让1球(主队+1)": {
+      "胜": "客队得分 - 主队得分 < 1",
+      "平": "客队得分 - 主队得分 = 1",
+      "负": "客队得分 - 主队得分 > 1"
+    }
+  },
+  "content": "竞彩足球让球胜平负玩法：竞猜主队加减让球数后的胜平负结果，必须让球。让球类型为整数让球（让1球、让2球等）。可选选项：胜, 平, 负。最大过关：8关。",
+  "importance": 0.95,
+  "ai_query_guide": {
+    "适用场景": [
+      "用户询问让球胜平负玩法规则",
+      "用户询问让球如何计算",
+      "用户需要了解让球玩法与胜平负的区别"
+    ],
+    "关键字段": ["max_legs", "options", "handicap_type", "handicap_rules", "can_single"],
+    "快速问答": {
+      "Q1": "这个玩法最多能串几关？",
+      "A1": "最多8关，查看 max_legs 字段",
+      "Q2": "可以单关投注吗？",
+      "A2": "可以，can_single 为 true",
+      "Q3": "让球怎么计算？",
+      "A3": "查看 handicap_rules 字段，例如主队让1球，主队2:0胜则让球胜平负结果为胜",
+      "Q4": "与胜平负玩法有什么区别？",
+      "A4": "让球胜平负必须让球，胜平负不让球。两者是独立玩法"
+    }
+  },
+  "examples": [
+    {
+      "description": "让球计算示例-主队让1球",
+      "match": "曼联(-1) VS 利物浦",
+      "actual_score": "2:0",
+      "handicap_result": "2-0=2>1，让球胜平负结果为胜",
+      "bet": "胜",
+      "condition": "投注'胜'则中奖"
+    },
+    {
+      "description": "让球计算示例-主队让1球平局",
+      "match": "曼联(-1) VS 利物浦",
+      "actual_score": "1:0",
+      "handicap_result": "1-0=1=1，让球胜平负结果为平",
+      "bet": "平",
+      "condition": "投注'平'则中奖"
+    },
+    {
+      "description": "让球计算示例-主队让1球负",
+      "match": "曼联(-1) VS 利物浦",
+      "actual_score": "0:0",
+      "handicap_result": "0-0=0<1，让球胜平负结果为负",
+      "bet": "负",
+      "condition": "投注'负'则中奖"
+    },
+    {
+      "description": "受让示例-主队受让1球",
+      "match": "曼联(+1) VS 利物浦",
+      "actual_score": "0:0",
+      "handicap_result": "客队0-主队0=0<1，让球胜平负结果为胜",
+      "bet": "胜",
+      "condition": "投注'胜'则中奖"
+    },
+    {
+      "description": "让2球计算示例",
+      "match": "曼城(-2) VS 弱队",
+      "actual_score": "3:0",
+      "handicap_result": "3-0=3>2，让球胜平负结果为胜",
+      "bet": "胜",
+      "condition": "净胜3球以上才让球胜"
+    },
+    {
+      "description": "让2球平局示例",
+      "match": "曼城(-2) VS 弱队",
+      "actual_score": "2:0",
+      "handicap_result": "2-0=2=2，让球胜平负结果为平",
+      "bet": "平",
+      "condition": "恰好净胜2球为让球平"
+    },
+    {
+      "description": "奖金计算示例-让球胜平负",
+      "match": "曼联(-1) VS 利物浦",
+      "bet": "胜",
+      "odds": 1.85,
+      "multiplier": 10,
+      "calculation": "2元 × 1.85 × 10倍 = 37元",
+      "note": "让球胜平负赔率通常比胜平负低（强队让球时）"
+    },
+    {
+      "description": "过关让球计算示例",
+      "matches": [
+        {"match": "曼联(-1) VS 利物浦", "bet": "胜", "odds": 1.85, "actual": "2:0"},
+        {"match": "曼城(-2) VS 弱队", "bet": "胜", "odds": 1.65, "actual": "3:0"}
+      ],
+      "multiplier": 5,
+      "calculation": "2元 × 1.85 × 1.65 × 5 = 30.53元",
+      "verification": "曼联2:0让球胜(2-0=2>1)✓, 曼城3:0让球胜(3-0=3>2)✓"
+    },
+    {
+      "description": "实战策略-强队让球",
+      "scenario": "强队让1球对阵弱队",
+      "analysis": "强队需净胜2球以上才能让球胜",
+      "strategy": "若认为强队难大胜，可考虑让球平或让球负",
+      "risk": "强队1:0胜=让球平，0:0或输球=让球负"
+    }
+  ],
+  "common_mistakes": [
+    {
+      "mistake": "认为让球胜平负和胜平负是同一个玩法",
+      "correction": "2013年6月4日后，两者已拆分为独立玩法，让球胜平负必须让球，胜平负不让球",
+      "tip": "查看比赛时，注意区分是胜平负还是让球胜平负"
+    },
+    {
+      "mistake": "让球计算错误",
+      "correction": "主队让球时，主队得分减去让球数与客队比较；客队让球时，客队得分减去让球数与主队比较",
+      "tip": "记住公式：让球方得分 - 让球数 vs 被让球方得分"
+    },
+    {
+      "mistake": "混淆让球方向",
+      "correction": "(-1)表示主队让1球，(+1)表示主队受让1球（即客队让1球）",
+      "tip": "负号=让球，正号=受让"
+    }
+  ],
+  "knowledge_chunk": {
+    "id": "jingcai_handicap_win_draw_loss",
+    "content": "竞彩足球让球胜平负玩法：竞猜主队加减让球数后的胜平负结果，必须让球。让球类型为整数让球（让1球、让2球等）。可选选项：胜, 平, 负。最大过关：8关。可单关投注。",
+    "category": "jingcai",
+    "play_type": "让球胜平负",
+    "importance": 0.95
+  }
+}

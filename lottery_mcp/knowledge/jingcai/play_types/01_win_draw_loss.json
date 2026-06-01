@@ -1,0 +1,138 @@
+{
+  "version": "3.0",
+  "lottery_type": "JINGCAI",
+  "play_type": "胜平负",
+  "id": "win_draw_loss",
+  "name": "胜平负",
+  "description": "竞猜全场90分钟（含伤停补时）主队的胜、平、负结果，不让球",
+  "options": ["胜", "平", "负"],
+  "options_count": 3,
+  "options_detail": {
+    "胜": "主队胜，客队负",
+    "平": "主队与客队平",
+    "负": "主队负，客队胜"
+  },
+  "max_legs": 8,
+  "max_legs_detail": "最多可选8关（中国体彩网官方规则）",
+  "is_independent": true,
+  "can_mix": true,
+  "can_single": true,
+  "handicap_type": "none",
+  "handicap_desc": "不让球",
+  "content": "竞彩足球胜平负玩法：竞猜全场90分钟（含伤停补时）主队的胜、平、负结果，不让球。可选选项：胜, 平, 负。最大过关：8关。",
+  "importance": 0.95,
+  "ai_query_guide": {
+    "适用场景": [
+      "用户询问胜平负玩法规则",
+      "用户询问不让球玩法",
+      "用户需要了解基础玩法规则"
+    ],
+    "关键字段": ["max_legs", "options", "handicap_type", "can_single"],
+    "快速问答": {
+      "Q1": "这个玩法最多能串几关？",
+      "A1": "最多8关，查看 max_legs 字段",
+      "Q2": "可以单关投注吗？",
+      "A2": "可以，can_single 为 true",
+      "Q3": "让球吗？",
+      "A3": "不让球，handicap_type 为 none",
+      "Q4": "有哪些投注选项？",
+      "A4": "胜、平、负三个选项"
+    }
+  },
+  "examples": [
+    {
+      "description": "单关投注示例",
+      "match": "曼联 VS 利物浦",
+      "bet": "胜",
+      "amount": "2元",
+      "condition": "曼联胜则中奖",
+      "calculation": "2元 × 胜赔率"
+    },
+    {
+      "description": "2串1过关示例",
+      "match1": "曼联 VS 利物浦",
+      "match2": "曼城 VS 阿森纳",
+      "bet": "胜 + 平",
+      "amount": "2元",
+      "condition": "曼联胜且曼城平则中奖",
+      "calculation": "2元 × 曼联胜赔率 × 曼城平赔率"
+    },
+    {
+      "description": "复式投注示例",
+      "match": "曼联 VS 利物浦",
+      "bet": "胜+平（双选）",
+      "amount": "4元（2注×2元）",
+      "condition": "曼联不败（胜或平）则中奖",
+      "note": "复式投注增加中奖概率但增加投入"
+    },
+    {
+      "description": "奖金计算示例-单关",
+      "match": "曼联 VS 利物浦",
+      "bet": "胜",
+      "odds": 2.15,
+      "multiplier": 10,
+      "calculation": "2元 × 2.15 × 10倍 = 43元",
+      "note": "单关奖金=投注金额×赔率×倍数"
+    },
+    {
+      "description": "奖金计算示例-过关",
+      "matches": [
+        {"match": "曼联 VS 利物浦", "bet": "胜", "odds": 2.15},
+        {"match": "曼城 VS 阿森纳", "bet": "平", "odds": 3.40}
+      ],
+      "multiplier": 5,
+      "calculation": "2元 × 2.15 × 3.40 × 5倍 = 73.10元",
+      "note": "过关奖金=投注金额×各场赔率×倍数（固定奖金已内含返还率，不需要额外乘70%）"
+    },
+    {
+      "description": "复式投注计算示例",
+      "match": "曼联 VS 利物浦",
+      "bet": "胜+平（双选）",
+      "odds": {"胜": 2.15, "平": 3.40},
+      "multiplier": 5,
+      "total_bets": 2,
+      "total_amount": "2注 × 5倍 × 2元 = 20元",
+      "possible_returns": "若胜: 2×2.15×5=21.5元; 若平: 2×3.40×5=34元"
+    },
+    {
+      "description": "M串N示例-3串4",
+      "matches": [
+        {"match": "曼联 VS 利物浦", "bet": "胜"},
+        {"match": "曼城 VS 阿森纳", "bet": "平"},
+        {"match": "切尔西 VS 热刺", "bet": "负"}
+      ],
+      "m_n": "3串4",
+      "breakdown": ["2串1×3注", "3串1×1注"],
+      "total_bets": 4,
+      "amount": "4注 × 2元 = 8元",
+      "note": "3串4=3注2串1+1注3串1，容错1场"
+    },
+    {
+      "description": "最大关数示例-8串1",
+      "matches": "8场比赛各选1个结果",
+      "total_bets": 1,
+      "amount": "2元",
+      "risk": "8场全中才中奖，难度极高",
+      "tip": "建议使用M串N增加容错"
+    }
+  ],
+  "common_mistakes": [
+    {
+      "mistake": "认为胜平负和让球胜平负是同一个玩法",
+      "correction": "2013年6月4日后，胜平负和让球胜平负已拆分为两个独立玩法",
+      "tip": "胜平负=不让球，让球胜平负=必须让球"
+    },
+    {
+      "mistake": "混淆胜平负和让球胜平负的赔率",
+      "correction": "两者赔率不同，让球胜平负赔率通常更高",
+      "tip": "强队让球时，让球胜平负的'胜'赔率可能比胜平负的'胜'赔率高"
+    }
+  ],
+  "knowledge_chunk": {
+    "id": "jingcai_win_draw_loss",
+    "content": "竞彩足球胜平负玩法：竞猜全场90分钟（含伤停补时）主队的胜、平、负结果，不让球。可选选项：胜, 平, 负。最大过关：8关。可单关投注。",
+    "category": "jingcai",
+    "play_type": "胜平负",
+    "importance": 0.95
+  }
+}

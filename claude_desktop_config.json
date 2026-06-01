@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "football-analyzer": {
+      "command": "python3",
+      "args": [
+        "-m",
+        "lottery_mcp"
+      ],
+      "cwd": "/Users/jand/Documents/TRAE-SOLO/football_analyzer_mcp",
+      "env": {
+        "LOTTERY_DATA_ROOT": "/Users/jand/Documents/TRAE-SOLO/football_analyzer_mcp/lottery_mcp",
+        "PYTHONPATH": "/Users/jand/Documents/TRAE-SOLO/football_analyzer_mcp"
+      }
+    }
+  }
+}
