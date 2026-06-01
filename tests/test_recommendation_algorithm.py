@@ -17,7 +17,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from lottery_mcp.betting_tools import BettingEngine
+# BettingEngine 在 tools/betting_tools 中
+from lottery_mcp.tools.betting_tools import BettingEngine
 
 
 class TestSigmoidFunction:

@@ -17,7 +17,7 @@ from pathlib import Path
 # 直接导入子模块，避免触发 mcp_server/__init__.py 的完整导入链
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-output_schemas = importlib.import_module("mcp_server.output_schemas")
+output_schemas = importlib.import_module("lottery_mcp.tools.output_schemas")
 
 ValidateBetOutput = output_schemas.ValidateBetOutput
 BonusCalculationOutput = output_schemas.BonusCalculationOutput
