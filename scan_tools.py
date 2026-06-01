@@ -97,7 +97,7 @@ def main():
     
     critical_workflows = [
         ("数据获取", ["lottery_fetch_today_matches", "lottery_get_match_data", "lottery_get_market_odds"]),
-        ("分析计算", ["lottery_analyze_with_pipeline", "lottery_analyze_match_plays", "lottery_analyze_with_models"]),
+        ("分析计算", ["lottery_analyze_with_pipeline", "lottery_analyze_match_plays", "lottery_compare_model_predictions"]),
         ("投注推荐", ["lottery_smart_parlay", "lottery_get_full_analysis_report", "lottery_recommend_best_play"]),
         ("规则验证", ["lottery_validate_bet", "lottery_validate_parlay", "lottery_calculate_bonus"]),
         ("风控守卫", ["lottery_validate_scenario", "lottery_rule_guard"]),
