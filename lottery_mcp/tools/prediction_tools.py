@@ -592,7 +592,6 @@ async def _get_pipeline_results(force_refresh: bool = False) -> PipelineResult:
     global _pipeline_cache, _pipeline_cache_time
     with _pipeline_lock:
         if _pipeline_cache and not force_refresh and _pipeline_cache_time:
-            from datetime import datetime
             try:
                 cached_time = datetime.fromisoformat(_pipeline_cache_time)
                 age = (datetime.now() - cached_time).total_seconds()

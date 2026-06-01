@@ -297,7 +297,7 @@ class BasePlayStrategy:
         score = (
             prob * self.config.prob_weight +
             max(ev, 0) * self.config.ev_weight +
-            min(odds / 5.0, 1.0) * self.config.odds_weight
+            min(odds / 5.0, 1.0) * self.config.odds_weight if odds is not None else 0.0
         )
         return score
 

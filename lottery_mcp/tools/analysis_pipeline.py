@@ -26,6 +26,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 from .helpers import _safe_float
+from lottery_mcp.analysis.strategy import MatchProfiler
 
 logger = logging.getLogger("lottery_mcp")
 
@@ -629,7 +630,7 @@ def _rank_plays(
         value_count = sum(1 for r in recs if r.get("value_rating") in ("有价值", "高价值"))
 
         # 赔率因子：鼓励较高赔率的玩法，但避免过高风险
-        odds_factor = min(best_odds / 3.0, 1.5) if best_odds > 0 else 0.5
+        odds_factor = min(best_odds / 3.0, 1.5) if (best_odds is not None and best_odds > 0) else 0.5
 
         # 综合评分（重新平衡权重）
         capped_value = min(value_count, 5)

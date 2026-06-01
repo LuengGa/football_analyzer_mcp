@@ -1,0 +1,42 @@
+<evaluation>
+  <qa_pair>
+    <question>DeepAnalysisEngine v3.0 的分层分析引擎包含几个层次？A: 3层, B: 4层, C: 5层, D: 6层</question>
+    <answer>C</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>在竞彩足球5种官方玩法中，哪个玩法类型需要BQC一致性分析来确保半全场和胜平负的预测不会矛盾？A: SPF, B: RQSPF, C: BF, D: BQC</question>
+    <answer>D</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>StrategyBacktest 回测引擎的默认初始资金是多少？A: 50, B: 100, C: 500, D: 1000</question>
+    <answer>B</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>lottery_full_analysis_and_betting 完整分析+投注单工作流包含几个执行步骤？</question>
+    <answer>13</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>在约束编译器(C001-C023)中，FATAL级别的约束有多少条？</question>
+    <answer>9</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>lottery_comprehensive_risk_assessment 全面风险评估工作流包含几个阶段？</question>
+    <answer>4</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>lottery_advanced_enhancements 高级深化功能中，DrawOptimizer（平局优化）和ComebackPatternRecognizer（逆转检测）属于哪个阶段？A: phase_1, B: phase_2, C: phase_3, D: phase_4</question>
+    <answer>B</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>lottery_complete_ml_analysis 完整ML分析工具测试了几个机器学习模型？</question>
+    <answer>4</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>在竞彩足球混合过关中，可以混合的玩法最多有几种？A: 2种, B: 3种, C: 4种, D: 5种</question>
+    <answer>C</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>竞彩足球SPF玩法的理论返还率（payout_rate）默认值是多少？A: 0.65, B: 0.71, C: 0.88, D: 0.91</question>
+    <answer>C</answer>
+  </qa_pair>
+</evaluation>

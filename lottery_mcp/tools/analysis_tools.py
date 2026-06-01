@@ -1739,10 +1739,10 @@ async def lottery_analyze_match(params: AnalyzeMatchInput, ctx: Context) -> str:
 
         # 2. 获取比赛资讯
         await ctx.log_info("[比赛分析] 获取比赛资讯...")
-        match_info = manager.get_match_head(match_id)
-        features = manager.get_match_feature(match_id)
-        h2h = manager.get_result_history(match_id, term_limits=5)
-        standings = manager.get_match_tables(match_id)
+        match_info = await manager.get_match_head(match_id)
+        features = await manager.get_match_feature(match_id)
+        h2h = await manager.get_result_history(match_id, term_limits=5)
+        standings = await manager.get_match_tables(match_id)
 
         # 3. 获取市场赔率（如果启用）
         market_odds = None
@@ -1838,8 +1838,8 @@ async def lottery_predict_with_model(params: PredictWithModelInput, ctx: Context
         await ctx.report_progress(0.4, "正在获取比赛数据...")
 
         # 获取比赛基本信息
-        match_info = manager.get_match_head(params.match_id)
-        features = manager.get_match_feature(params.match_id)
+        match_info = await manager.get_match_head(params.match_id)
+        features = await manager.get_match_feature(params.match_id)
 
         if not match_info.get("data"):
             raise_tool_error(
@@ -1869,7 +1869,7 @@ async def lottery_predict_with_model(params: PredictWithModelInput, ctx: Context
         # --- 数据源1: 积分榜 (get_match_tables) ---
         # sporttery.cn 积分榜通常包含 homeTables/awayTables，
         # 其中可能有进球统计字段（goalFor/goalAgainst 等）
-        standings_resp = manager.get_match_tables(params.match_id)
+        standings_resp = await manager.get_match_tables(params.match_id)
         if standings_resp.get("data"):
             tables = standings_resp["data"]
             home_tables = tables.get("homeTables", {})
@@ -1892,7 +1892,7 @@ async def lottery_predict_with_model(params: PredictWithModelInput, ctx: Context
         # --- 数据源2: 近期战绩 (get_match_recent_form) ---
         # 如果积分榜数据不完整，从近期比赛结果中计算
         if home_games is None or away_games is None:
-            form_resp = manager.get_match_recent_form(params.match_id, term_limits=10)
+            form_resp = await manager.get_match_recent_form(params.match_id, term_limits=10)
             if form_resp.get("data"):
                 form_data = form_resp["data"]
                 home_form = form_data.get("home_recent_form", [])
@@ -2633,7 +2633,7 @@ async def lottery_get_match_context(params: GetMatchContextInput, ctx: Context) 
         }
 
         # 1. 基础信息
-        head_resp = manager.get_match_head(match_id)
+        head_resp = await manager.get_match_head(match_id)
         if head_resp.get("data"):
             context_data["basic_info"] = {
                 "home_team": head_resp["data"].get("homeTeam", ""),
@@ -2682,23 +2682,23 @@ async def lottery_get_match_context(params: GetMatchContextInput, ctx: Context) 
 
         # 4. 历史交锋
         if params.include_history:
-            h2h_resp = manager.get_result_history(match_id, term_limits=10)
+            h2h_resp = await manager.get_result_history(match_id, term_limits=10)
             if h2h_resp.get("data"):
                 context_data["head_to_head"] = h2h_resp["data"]
 
         # 5. 近期状态
         if params.include_form:
-            form_resp = manager.get_match_recent_form(match_id)
+            form_resp = await manager.get_match_recent_form(match_id)
             if form_resp.get("data"):
                 context_data["team_form"] = form_resp["data"]
 
         # 6. 伤停信息
-        injury_resp = manager.get_injury_suspension(match_id)
+        injury_resp = await manager.get_injury_suspension(match_id)
         if injury_resp.get("data"):
             context_data["injuries"] = injury_resp["data"]
 
         # 7. 积分榜
-        standings_resp = manager.get_match_tables(match_id)
+        standings_resp = await manager.get_match_tables(match_id)
         if standings_resp.get("data"):
             context_data["standings"] = standings_resp["data"]
 
@@ -2746,7 +2746,7 @@ async def lottery_quantify_injury_impact(params: QuantifyInjuryImpactInput, ctx:
         manager = _get_manager()
 
         # 获取伤停数据
-        injury_data = manager.get_injury_suspension(params.match_id)
+        injury_data = await manager.get_injury_suspension(params.match_id)
 
         if not injury_data.get("data"):
             raise_tool_error(
@@ -2889,7 +2889,7 @@ async def lottery_assess_risk(params: AssessRiskInput, ctx: Context) -> str:
                     }
 
         # 2. 状态风险
-        form_resp = manager.get_match_recent_form(match_id)
+        form_resp = await manager.get_match_recent_form(match_id)
         if form_resp.get("data"):
             form_data = form_resp["data"]
             home_form = form_data.get("home_recent_form", [])
@@ -2913,7 +2913,7 @@ async def lottery_assess_risk(params: AssessRiskInput, ctx: Context) -> str:
             }
 
         # 3. 交锋风险
-        h2h_resp = manager.get_result_history(match_id, term_limits=5)
+        h2h_resp = await manager.get_result_history(match_id, term_limits=5)
         if h2h_resp.get("data"):
             h2h_list = h2h_resp["data"].get("list", [])
             if len(h2h_list) < 3:
@@ -2938,7 +2938,7 @@ async def lottery_assess_risk(params: AssessRiskInput, ctx: Context) -> str:
             }
 
         # 4. 伤停风险
-        injury_resp = manager.get_injury_suspension(match_id)
+        injury_resp = await manager.get_injury_suspension(match_id)
         if injury_resp.get("data"):
             injuries = injury_resp["data"].get("injuries", [])
             key_injuries = [i for i in injuries if i.get("importance") in ["high", "key"]]
@@ -3510,19 +3510,19 @@ async def lottery_compare_matches(params: CompareMatchesInput, ctx: Context) -> 
 
             # 获取近期状态
             if "form" in dimensions:
-                form_resp = manager.get_match_recent_form(match_id)
+                form_resp = await manager.get_match_recent_form(match_id)
                 if form_resp.get("data"):
                     match_data["form"] = form_resp["data"]
 
             # 获取历史交锋
             if "h2h" in dimensions:
-                h2h_resp = manager.get_result_history(match_id, term_limits=5)
+                h2h_resp = await manager.get_result_history(match_id, term_limits=5)
                 if h2h_resp.get("data"):
                     match_data["h2h"] = h2h_resp["data"]
 
             # 获取伤停信息
             if "injuries" in dimensions:
-                injury_resp = manager.get_injury_suspension(match_id)
+                injury_resp = await manager.get_injury_suspension(match_id)
                 if injury_resp.get("data"):
                     injuries = injury_resp["data"].get("injuries", [])
                     match_data["injuries"] = {
@@ -3532,7 +3532,7 @@ async def lottery_compare_matches(params: CompareMatchesInput, ctx: Context) -> 
 
             # 获取积分榜
             if "standings" in dimensions:
-                standings_resp = manager.get_match_tables(match_id)
+                standings_resp = await manager.get_match_tables(match_id)
                 if standings_resp.get("data"):
                     match_data["standings"] = standings_resp["data"]
 
