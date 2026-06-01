@@ -1099,6 +1099,24 @@ async def _lottery_get_players(match_id: str, term_limits: int = 3, ctx: Context
         return f"获取失败: {e}"
 
 
+async def _lottery_get_injury_suspension(match_id: str, ctx: Context = None) -> str:
+    """获取竞彩伤停一览"""
+    try:
+        logger.info(f"获取伤停信息: {match_id}")
+        from lottery_mcp.data.sources import FreeDataSourceManager
+        
+        manager = FreeDataSourceManager()
+        result = await manager.get_injury_suspension(match_id)
+        
+        if result.get("data"):
+            data = result["data"]
+            return "# 伤停一览\n\n" + json.dumps(data, ensure_ascii=False, indent=2)
+        return f"未找到比赛 {match_id} 的伤停信息"
+    except Exception as e:
+        logger.error(f"获取伤停信息失败: {e}")
+        return f"获取失败: {e}"
+
+
 # ============================================================
 # Tool Registration
 # ============================================================
@@ -2227,4 +2245,21 @@ Use when: 需要了解球员情况时。
     async def _lottery_get_players(params: MatchIdWithLimitInput, ctx: Context) -> str:
         return await _lottery_get_players(params.match_id, params.limit, ctx)
 
-    logger.info("滚球盘工具注册完成：lottery_get_live_odds")
+    @mcp.tool(
+        name="lottery_get_injury_suspension",
+        description="""获取竞彩伤停一览
+
+获取指定竞彩比赛的伤停信息：
+- 主队伤病球员
+- 客队伤病球员
+- 停赛球员
+- 预计复出时间
+
+Use when: 需要了解球员伤停情况时。
+""",
+        annotations={"readOnlyHint": True, "idempotentHint": True}
+    )
+    async def _lottery_get_injury_suspension(params: MatchIdInput, ctx: Context) -> str:
+        return await _lottery_get_injury_suspension(params.match_id, ctx)
+
+    logger.info("竞彩资讯工具注册完成：共8个工具")

@@ -20,7 +20,7 @@ def extract_tools_from_file(file_path):
     
     # 匹配 @mcp.tool 装饰器和 name 属性
     pattern = re.compile(
-        r'@mcp\.tool\([^)]*name="([^"]+)"[^)]*',
+        r'@mcp\.tool\(\s*\n?\s*name="([^"]+)"',
         re.DOTALL
     )
     
@@ -52,6 +52,7 @@ def main():
     
     # 工具分类
     categories = {
+        "端到端工作流": ["workflows.py"],
         "数据获取": ["data_tools.py"],
         "分析引擎": ["analysis_tools.py"],
         "投注推荐": ["betting_tools.py", "prediction_tools.py"],

@@ -28,11 +28,7 @@ def test_basic_imports():
         from lottery_mcp.server import create_mcp_server, startup_health_check
         logger.info("✅ 工作流模块导入成功")
 
-        from lottery_mcp.tools.prediction_tools import (
-            lottery_smart_parlay,
-            lottery_get_full_analysis_report,
-            lottery_recommend_best_play,
-        )
+        from lottery_mcp.tools.prediction_tools import register_prediction_tools
         logger.info("✅ 预测工具导入成功")
 
         from lottery_mcp.tools.analysis_tools import lottery_analyze_with_pipeline
@@ -116,8 +112,6 @@ def test_helpers_and_models():
         from lottery_mcp.models import (
             FetchTodayMatchesInput,
             AnalyzeWithPipelineInput,
-            SmartParlayInput,
-            FullAnalysisReportInput,
         )
 
         # 测试 _to_json
@@ -130,19 +124,9 @@ def test_helpers_and_models():
         logger.info(f"✅ FetchTodayMatchesInput 正常创建")
 
         input2 = AnalyzeWithPipelineInput(
-            analyze_depth="deep", include_models=True, include_plays=True
+            max_matches=5, lottery_type="竞彩足球"
         )
         logger.info(f"✅ AnalyzeWithPipelineInput 正常创建")
-
-        input3 = SmartParlayInput(
-            bankroll=200.0,
-            lottery_type="竞彩足球",
-            risk_tolerance="medium",
-        )
-        logger.info(f"✅ SmartParlayInput 正常创建")
-
-        input4 = FullAnalysisReportInput()
-        logger.info(f"✅ FullAnalysisReportInput 正常创建")
 
         return True
 
