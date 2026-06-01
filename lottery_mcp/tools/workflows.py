@@ -117,20 +117,27 @@ def register_workflow_tools(mcp):
             },
             {
                 "step": 5,
-                "name": "分析比赛数据",
-                "tool": "lottery_analyze_all_matches / lottery_analyze_match",
-                "params": {},
-                "description": "对比赛进行深度分析，识别价值投注机会（必选）"
+                "name": "智能顾问深度分析 【NEW - MCP大脑】",
+                "tool": "lottery_advisor_analysis",
+                "params": {"match_id": "具体比赛ID"},
+                "description": "【强烈推荐】5层综合分析：赔率+模型+基本面+市场+风险矩阵，自动整合竞彩资讯和第三方数据，输出概率校准、价值发现、投注方案"
             },
             {
                 "step": 6,
+                "name": "分析比赛数据",
+                "tool": "lottery_analyze_all_matches / lottery_analyze_match",
+                "params": {},
+                "description": "批量分析所有比赛（可选，建议先用advisor获得深度判断）"
+            },
+            {
+                "step": 7,
                 "name": "查看热门推荐",
                 "tool": "lottery_get_daily_recommendations",
                 "params": {},
                 "description": "获取AI推荐的热门比赛和最佳投注选项（推荐）"
             },
             {
-                "step": 7,
+                "step": 8,
                 "name": "生成智能投注单",
                 "tool": "lottery_smart_parlay",
                 "params": {
@@ -142,7 +149,7 @@ def register_workflow_tools(mcp):
                 "description": "根据策略和资金生成最优混合过关投注单（必选）"
             },
             {
-                "step": 8,
+                "step": 9,
                 "name": "风险评估",
                 "tool": "lottery_validate_scenario / lottery_rule_guard",
                 "params": {
