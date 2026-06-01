@@ -66,14 +66,14 @@ class TestRulesEngine:
         """测试北单奖金计算"""
         result = engine.calculate_bonus(
             bets=[{"match_id": "m1", "play_type": "SPF", "selection": "胜", "odds": 2.0, "stake": 2.0},
-                   {"match_id": "m2", "play_type": "SPF", "selection": "胜", "odds": 1.5, "stake": 2.0}],
+                  {"match_id": "m2", "play_type": "SPF", "selection": "胜", "odds": 1.5, "stake": 2.0}],
             parlay_type="2x1",
             lottery_type="北京单场",
-            multiplier=1,
+            multiplier=2,
         )
-        # 北单: 2元 x SP连乘 x 65% x 倍数 = 2 * 2.0 * 1.5 * 0.65 * 1 = 3.9
+        # 北单: 2元 x SP值连乘 x 65% x 倍数 = 2 x 2.0 x 1.5 x 0.65 x 2 = 7.8
         assert result["status"] == "simulation"
-        assert abs(result["gross_bonus"] - 3.9) < 0.01
+        assert abs(result["gross_bonus"] - 7.8) < 0.01
 
     def test_get_single_ticket_limit(self, engine):
         """测试单票限额"""

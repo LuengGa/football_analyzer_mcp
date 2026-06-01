@@ -825,7 +825,7 @@ Workflow: 在任何投注操作前调用，作为最后一道防线。与 valida
         annotations={
             "readOnlyHint": False,
             "destructiveHint": False,
-            "idempotentHint": False,
+            "idempotentHint": True,
             "openWorldHint": False,
         },
     )
