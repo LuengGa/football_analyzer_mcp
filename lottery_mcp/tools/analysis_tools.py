@@ -1282,6 +1282,112 @@ async def lottery_analyze_with_pipeline(params: AnalyzeWithPipelineInput, ctx: C
         raise_tool_error(f"流水线分析失败: {str(e)}")
 
 
+async def lottery_advisor_analysis(params: AnalyzeMatchInput, ctx: Context) -> str:
+    """智能顾问深度分析 - 多源数据综合推理"""
+    try:
+        from lottery_mcp.analysis.advisor import SmartAdvisor
+
+        await ctx.report_progress(0.1, "正在加载比赛数据...")
+
+        matches = get_cached_matches()
+        if not matches:
+            raise_tool_error("数据缓存为空，请先调用 lottery_fetch_today_matches 获取比赛数据")
+
+        match_data = None
+        for m in matches:
+            if m.get("match_id") == params.match_id:
+                match_data = m
+                break
+
+        if not match_data:
+            raise_tool_error(f"未找到比赛ID: {params.match_id}")
+
+        await ctx.report_progress(0.3, "正在获取竞彩资讯数据...")
+
+        # 获取竞彩资讯数据
+        manager = _get_manager()
+        features = None
+        h2h = None
+        standings = None
+        recent_form = None
+        injuries = None
+
+        try:
+            feat_result = await manager.get_match_feature(params.match_id)
+            if feat_result.get("data"):
+                features = feat_result["data"]
+        except Exception:
+            pass
+
+        try:
+            h2h_result = await manager.get_result_history(params.match_id)
+            if h2h_result.get("data"):
+                h2h = h2h_result["data"]
+        except Exception:
+            pass
+
+        try:
+            standings_result = await manager.get_match_tables(params.match_id)
+            if standings_result.get("data"):
+                standings = standings_result["data"]
+        except Exception:
+            pass
+
+        try:
+            form_result = await manager.get_match_recent_form(params.match_id)
+            if form_result.get("data"):
+                recent_form = form_result["data"]
+        except Exception:
+            pass
+
+        try:
+            inj_result = await manager.get_injury_suspension(params.match_id)
+            if inj_result.get("data"):
+                injuries = inj_result["data"]
+        except Exception:
+            pass
+
+        await ctx.report_progress(0.6, "正在执行深度分析...")
+
+        advisor = SmartAdvisor()
+        decision = advisor.advise(
+            match_data=match_data,
+            features=features,
+            h2h=h2h,
+            standings=standings,
+            recent_form=recent_form,
+            injuries=injuries,
+        )
+
+        await ctx.report_progress(1.0, "分析完成")
+
+        result = {
+            "success": True,
+            "match_id": decision.match_id,
+            "match_info": decision.match_info,
+            "calibrated_probabilities": decision.calibrated_probs,
+            "model_consensus": decision.model_consensus,
+            "value_plays": decision.value_plays,
+            "arbitrage_signals": decision.arbitrage_signals,
+            "risk_matrix": {k: {"score": v["score"], "level": v["level"]}
+                           for k, v in decision.risk_matrix.items()},
+            "risk_score": decision.risk_score,
+            "betting_plans": decision.betting_plans,
+            "optimal_play": decision.optimal_play,
+            "optimal_selection": decision.optimal_selection,
+            "confidence_score": decision.confidence_score,
+            "decision_rationale": decision.decision_rationale,
+            "overall_verdict": decision.overall_verdict,
+            "timestamp": datetime.now().isoformat(),
+        }
+
+        return _to_json(result)
+
+    except Exception as e:
+        logger.error(f"智能顾问分析失败: {e}")
+        raise_tool_error(f"智能顾问分析失败: {str(e)}")
+
+
 async def lottery_analyze_match_plays(params: AnalyzeMatchPlaysInput, ctx: Context) -> str:
     """分析比赛的五大玩法"""
     try:
@@ -4199,3 +4305,36 @@ Use when: 需要科学分配投注资金、优化投资组合时。""",
     )
     async def _lottery_optimize_stakes(params: OptimizeStakesInput, ctx: Context) -> str:
         return await lottery_optimize_stakes(params, ctx)
+
+    @mcp.tool(
+        name="lottery_advisor_analysis",
+        description="""智能顾问深度分析 - 多源数据综合推理
+
+对单场比赛进行5层深度分析，整合所有可用数据源：
+1. 赔率层：分析5大玩法赔率隐含概率和返还率
+2. 模型层：泊松+Elo+xG多模型共识
+3. 基本面层：历史交锋+积分榜+近期状态+伤停调整概率
+4. 市场层：欧指/亚盘/大小球跨市场对比
+5. 综合层：价值发现+风险矩阵+个性化投注方案
+
+输出包括：
+- 概率校准结果（赔率+基本面综合调整）
+- 价值投注机会（EV正期望值检测）
+- 跨玩法/跨市场信号
+- 多维度风险矩阵评分
+- 凯利公式投注方案
+- 最终决策建议
+
+Use when: 需要最全面的智能分析判断时，这是MCP的"大脑"功能。
+先调用lottery_fetch_today_matches获取数据，然后用此工具进行深度分析。""",
+        annotations={
+            "readOnlyHint": True,
+            "destructiveHint": False,
+            "idempotentHint": True,
+            "openWorldHint": True,
+        },
+    )
+    async def _lottery_advisor_analysis(params: AnalyzeMatchInput, ctx: Context) -> str:
+        return await lottery_advisor_analysis(params, ctx)
+
+    logger.info("分析工具注册完成：含智能顾问")

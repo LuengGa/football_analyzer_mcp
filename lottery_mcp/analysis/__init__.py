@@ -21,12 +21,20 @@
 
 from .engine import (
     StatisticalEngine,
+    DeepAnalysisEngine,
+    MultiSourceAnalysis,
     analyze_match,
     analyze_all_matches,
     detect_risk_signals,
     comprehensive_analysis,
     generate_analysis_report,
     batch_analyze_matches,
+)
+
+from .advisor import (
+    SmartAdvisor,
+    AdvisorDecision,
+    get_advisor_analysis,
 )
 
 from .models import (
@@ -143,12 +151,19 @@ from .play_enhancement_plan import (
 __all__ = [
     # 分析引擎
     "StatisticalEngine",
+    "DeepAnalysisEngine",
+    "MultiSourceAnalysis",
     "analyze_match",
     "analyze_all_matches",
     "detect_risk_signals",
     "comprehensive_analysis",
     "generate_analysis_report",
     "batch_analyze_matches",
+
+    # 智能顾问
+    "SmartAdvisor",
+    "AdvisorDecision",
+    "get_advisor_analysis",
     
     # 统计模型
     "PoissonModel",
