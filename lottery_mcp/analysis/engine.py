@@ -50,6 +50,7 @@ class MultiSourceAnalysis:
     overall_confidence: str = "中"
     reasoning_chain: List[Dict[str, Any]] = field(default_factory=list)
     final_judgment: str = ""
+    bqc_consistency: Dict[str, Any] = field(default_factory=dict)
 
 
 class DeepAnalysisEngine:
@@ -518,6 +519,9 @@ class DeepAnalysisEngine:
         """综合所有层级分析，生成最终判断"""
         spf = analysis.spf_probs
 
+        # BQC一致性分析
+        self._analyze_bqc_consistency(analysis)
+
         # 风险识别
         self._identify_risks(analysis)
 
@@ -545,6 +549,125 @@ class DeepAnalysisEngine:
 
             analysis.overall_confidence = conf
             analysis.final_judgment = judgment
+
+    def _analyze_bqc_consistency(self, analysis: MultiSourceAnalysis):
+        """BQC半全场数据与SPF预测一致性分析
+
+        如果BQC数据可用，用其增强SPF预测置信度：
+        - SPF预测"主胜" + BQC高概率"胜-胜"或"胜-平" → 增加置信度
+        - SPF预测"主胜" + BQC高概率"负-胜"等 → 标记不一致
+        """
+        bqc_data = analysis.official_odds.get("bqc", {})
+        if not bqc_data:
+            analysis.bqc_consistency = {"status": "no_bqc_data"}
+            return
+
+        top_results = bqc_data.get("top_results", [])
+        if not top_results:
+            analysis.bqc_consistency = {"status": "no_bqc_data"}
+            return
+
+        bqc_consistency = {
+            "status": "analyzed",
+            "top_bqc": top_results[:2],
+            "spf_alignment": "unknown",
+            "confidence_adjustment": 0,
+        }
+
+        spf = analysis.spf_probs
+        if not spf:
+            analysis.bqc_consistency = bqc_consistency
+            return
+
+        home_p = spf.get("主胜", 0)
+        away_p = spf.get("客胜", 0)
+        draw_p = spf.get("平局", 0)
+
+        spf_prediction = None
+        if home_p > away_p and home_p > draw_p:
+            spf_prediction = "主胜"
+        elif away_p > home_p and away_p > draw_p:
+            spf_prediction = "客胜"
+        else:
+            spf_prediction = "平局"
+
+        bqc_home_friendly = {"胜-胜", "胜-平", "胜-负", "平-胜", "平-平"}
+        bqc_away_friendly = {"负-负", "负-平", "负-胜", "平-负", "平-平"}
+        bqc_draw_friendly = {"平-平", "胜-平", "负-平", "平-胜", "平-负"}
+
+        bqc_top_set = set()
+        bqc_high_prob = 0.0
+        for item in top_results[:3]:
+            result = item.get("result", item.get("value", ""))
+            prob = item.get("implied_prob", 0)
+            bqc_top_set.add(result)
+            if prob > bqc_high_prob:
+                bqc_high_prob = prob
+
+        if spf_prediction == "主胜":
+            aligned = bqc_top_set & bqc_home_friendly
+            contradictory = bqc_top_set & {"负-负", "负-平", "负-胜"}
+            if aligned:
+                bqc_consistency["spf_alignment"] = "consistent"
+                bqc_consistency["confidence_adjustment"] = 0.05
+                bqc_consistency["detail"] = f"BQC高概率半场结果({', '.join(aligned)})与SPF主胜预测一致"
+                analysis.spf_probs["主胜"] = min(0.95, analysis.spf_probs.get("主胜", 0.5) + 0.05)
+                if "平局" in analysis.spf_probs:
+                    analysis.spf_probs["平局"] = max(0.02, analysis.spf_probs["平局"] - 0.02)
+                if "客胜" in analysis.spf_probs:
+                    analysis.spf_probs["客胜"] = max(0.02, analysis.spf_probs["客胜"] - 0.03)
+                total = sum(analysis.spf_probs.values())
+                if total > 0:
+                    analysis.spf_probs = {k: round(v / total, 4) for k, v in analysis.spf_probs.items()}
+            elif contradictory:
+                bqc_consistency["spf_alignment"] = "contradictory"
+                bqc_consistency["confidence_adjustment"] = -0.05
+                bqc_consistency["detail"] = f"⚠️ BQC倾向客队({', '.join(contradictory)})与SPF主胜预测矛盾"
+                analysis.risk_factors.append({
+                    "type": "BQC矛盾",
+                    "detail": f"BQC半全场数据与SPF主胜预测不一致",
+                    "severity": "中",
+                })
+        elif spf_prediction == "客胜":
+            aligned = bqc_top_set & bqc_away_friendly
+            contradictory = bqc_top_set & {"胜-胜", "胜-平", "胜-负"}
+            if aligned:
+                bqc_consistency["spf_alignment"] = "consistent"
+                bqc_consistency["confidence_adjustment"] = 0.05
+                bqc_consistency["detail"] = f"BQC高概率半场结果({', '.join(aligned)})与SPF客胜预测一致"
+                analysis.spf_probs["客胜"] = min(0.95, analysis.spf_probs.get("客胜", 0.5) + 0.05)
+                if "平局" in analysis.spf_probs:
+                    analysis.spf_probs["平局"] = max(0.02, analysis.spf_probs["平局"] - 0.02)
+                if "主胜" in analysis.spf_probs:
+                    analysis.spf_probs["主胜"] = max(0.02, analysis.spf_probs["主胜"] - 0.03)
+                total = sum(analysis.spf_probs.values())
+                if total > 0:
+                    analysis.spf_probs = {k: round(v / total, 4) for k, v in analysis.spf_probs.items()}
+            elif contradictory:
+                bqc_consistency["spf_alignment"] = "contradictory"
+                bqc_consistency["confidence_adjustment"] = -0.05
+                bqc_consistency["detail"] = f"⚠️ BQC倾向主队({', '.join(contradictory)})与SPF客胜预测矛盾"
+                analysis.risk_factors.append({
+                    "type": "BQC矛盾",
+                    "detail": f"BQC半全场数据与SPF客胜预测不一致",
+                    "severity": "中",
+                })
+        else:
+            aligned = bqc_top_set & bqc_draw_friendly
+            if aligned:
+                bqc_consistency["spf_alignment"] = "consistent"
+                bqc_consistency["confidence_adjustment"] = 0.03
+                bqc_consistency["detail"] = f"BQC高概率半场结果({', '.join(aligned)})与SPF平局预测一致"
+            else:
+                bqc_consistency["spf_alignment"] = "neutral"
+                bqc_consistency["detail"] = "BQC半全场数据与SPF平局预测无明显一致性"
+
+        analysis.bqc_consistency = bqc_consistency
+        analysis.reasoning_chain.append({
+            "layer": "BQC分析",
+            "finding": bqc_consistency.get("detail", "BQC一致性分析完成"),
+            "bqc_alignment": bqc_consistency.get("spf_alignment", "unknown"),
+        })
 
     def _identify_risks(self, analysis: MultiSourceAnalysis):
         """识别风险因素"""

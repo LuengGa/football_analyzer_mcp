@@ -90,7 +90,21 @@ def create_ssl_context() -> ssl.SSLContext:
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 API_KEYS_FILE = os.environ.get("LOTTERY_API_KEYS_FILE", str(_PROJECT_ROOT / ".env.api_keys"))
 DEFAULT_TIMEOUT = 10  # 秒
-CACHE_TTL_SECONDS = 3600  # 1小时
+CACHE_TTL_SECONDS = 3600  # 1小时（默认）
+
+# 分级TTL：不同数据源使用不同缓存过期时间
+CACHE_TTL_BY_TYPE = {
+    "odds": 300,         # 赔率数据：5分钟（变化频繁）
+    "market_odds": 600,  # 国际市场赔率：10分钟
+    "standings": 21600,  # 积分榜：6小时（变化缓慢）
+    "h2h": 3600,         # 历史交锋：1小时
+    "form": 1800,        # 近期战绩：30分钟
+    "features": 7200,    # 特征分析：2小时
+    "injuries": 7200,    # 伤停信息：2小时
+    "schedule": 3600,    # 赛程：1小时
+    "results": 86400,    # 赛果：24小时（历史数据不变化）
+    "default": 3600,     # 默认：1小时
+}
 
 # api-football 免费层: 100次/天
 API_FOOTBALL_DAILY_LIMIT = 100
@@ -142,19 +156,20 @@ THE_ODDS_API_LEAGUE_MAP = {
 # ============================================================================
 
 class DataCache:
-    """线程安全的内存缓存，支持TTL过期"""
+    """线程安全的内存缓存，支持TTL过期和分级TTL"""
 
     def __init__(self, ttl_seconds: int = CACHE_TTL_SECONDS):
         self._cache: Dict[str, Dict[str, Any]] = {}
         self._ttl = ttl_seconds
         self._lock = threading.Lock()
 
-    def get(self, key: str) -> Optional[Dict[str, Any]]:
+    def get(self, key: str, ttl: int = None) -> Optional[Dict[str, Any]]:
+        effective_ttl = ttl if ttl is not None else self._ttl
         with self._lock:
             entry = self._cache.get(key)
             if entry is None:
                 return None
-            if time.time() - entry["timestamp"] > self._ttl:
+            if time.time() - entry["timestamp"] > effective_ttl:
                 del self._cache[key]
                 return None
             return entry["data"]
@@ -165,6 +180,14 @@ class DataCache:
                 "data": data,
                 "timestamp": time.time(),
             }
+
+    def get_or_set(self, key: str, data: Any, ttl: int = None) -> Any:
+        """获取缓存，如果不存在或过期则设置并返回数据"""
+        cached = self.get(key, ttl)
+        if cached is not None:
+            return cached
+        self.set(key, data)
+        return data
 
     def clear(self) -> None:
         with self._lock:

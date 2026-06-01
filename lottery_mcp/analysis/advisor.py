@@ -47,6 +47,10 @@ class AdvisorDecision:
     confidence_score: float = 0.5
     overall_verdict: str = ""
 
+    # 推理链
+    reasoning_chain: List[Dict[str, Any]] = field(default_factory=list)
+    llm_summary: str = ""
+
 
 class SmartAdvisor:
     """智能顾问
@@ -373,6 +377,114 @@ class SmartAdvisor:
         """综合所有信息做出最终决策"""
         verdicts = []
 
+        # 构建推理链
+        reasoning_chain = []
+
+        # 步骤1: 赔率分析
+        odds_step = {
+            "step_name": "赔率层分析",
+            "data_sources": ["official_odds", "spf_probs"],
+            "finding": "",
+            "confidence": 90,
+        }
+        spf_info = analysis.official_odds.get("spf", {})
+        if spf_info and analysis.spf_probs:
+            hp = analysis.spf_probs.get("主胜", 0)
+            odds_step["finding"] = f"SPF隐含概率: 主{hp:.1%}，返还率{spf_info.get('payout_rate', 'N/A')}"
+            odds_step["confidence"] = 85 if spf_info.get("payout_rate", 0) > 0.88 else 70
+        else:
+            odds_step["finding"] = "赔率数据不足，无法准确分析"
+            odds_step["confidence"] = 40
+        reasoning_chain.append(odds_step)
+
+        # 步骤2: 模型共识
+        consensus_step = {
+            "step_name": "多模型共识",
+            "data_sources": ["poisson_model", "elo_model", "odds_implied_probs"],
+            "finding": "",
+            "confidence": 70,
+        }
+        if decision.model_consensus:
+            level = decision.model_consensus.get("consensus_level", "未知")
+            avg_diff = decision.model_consensus.get("avg_diff", 0)
+            consensus_step["finding"] = f"模型共识度: {level}（平均差异{avg_diff:.1%}）"
+            consensus_step["confidence"] = 85 if level == "高" else 65 if level == "中" else 45
+        else:
+            consensus_step["finding"] = "缺少多模型对比数据"
+            consensus_step["confidence"] = 30
+        reasoning_chain.append(consensus_step)
+
+        # 步骤3: 价值发现
+        value_step = {
+            "step_name": "价值发现",
+            "data_sources": ["betting_odds", "calibrated_probs", "ev_analysis"],
+            "finding": "",
+            "confidence": 60,
+        }
+        if decision.value_plays:
+            top_value = decision.value_plays[0]
+            value_step["finding"] = f"发现{len(decision.value_plays)}个价值信号: {top_value.get('detail', '')}"
+            value_step["confidence"] = 75 if len(decision.value_plays) >= 2 else 60
+        else:
+            value_step["finding"] = "未发现显著价值偏差"
+            value_step["confidence"] = 55
+        reasoning_chain.append(value_step)
+
+        # 步骤4: 风险评估
+        risk_step = {
+            "step_name": "风险矩阵",
+            "data_sources": ["risk_matrix", "injury_impact", "standings_analysis", "market_odds_comparison"],
+            "finding": f"综合风险评分: {decision.risk_score}/100",
+            "confidence": 80,
+        }
+        if decision.risk_score > 60:
+            risk_step["finding"] += "（高风险）"
+        elif decision.risk_score < 30:
+            risk_step["finding"] += "（低风险）"
+        else:
+            risk_step["finding"] += "（中等风险）"
+        reasoning_chain.append(risk_step)
+
+        # 步骤5: 投注方案
+        plan_step = {
+            "step_name": "投注方案生成",
+            "data_sources": ["kelly_criterion", "bankroll", "risk_tolerance", "betting_plans"],
+            "finding": "",
+            "confidence": 70,
+        }
+        if decision.betting_plans:
+            top_plan = decision.betting_plans[0]
+            decision.optimal_play = top_plan["play_type"]
+            decision.optimal_selection = top_plan["selection"]
+            decision.confidence_score = top_plan["probability"]
+            plan_step["finding"] = f"最优方案: {top_plan['play_type']}-{top_plan['selection']} (EV+{top_plan['edge']}%, 凯利{top_plan['kelly_fraction']:.4f})"
+            plan_step["confidence"] = int(top_plan["probability"] * 100)
+        else:
+            plan_step["finding"] = "未生成符合条件的投注方案"
+            plan_step["confidence"] = 20
+        reasoning_chain.append(plan_step)
+
+        decision.reasoning_chain = reasoning_chain
+
+        # 构建LLM友好摘要
+        summary_parts = []
+        summary_parts.append(f"比赛: {analysis.home_team} vs {analysis.away_team} ({analysis.league})")
+        if decision.optimal_selection:
+            summary_parts.append(f"推荐: {decision.optimal_play}-{decision.optimal_selection}")
+        else:
+            summary_parts.append("推荐: 暂无明显投注机会，建议观望")
+        if decision.value_plays:
+            summary_parts.append(f"价值信号: {len(decision.value_plays)}个（{', '.join(p.get('type', '') for p in decision.value_plays[:2])}）")
+        if decision.arbitrage_signals:
+            summary_parts.append(f"套利信号: {len(decision.arbitrage_signals)}个")
+        summary_parts.append(f"风险评分: {decision.risk_score}/100")
+        summary_parts.append(f"置信度: {decision.confidence_score:.0%}")
+        if decision.risk_score > 60:
+            summary_parts.append("⚠️ 警告: 高风险比赛，请谨慎参与")
+        elif decision.risk_score < 30 and decision.value_plays:
+            summary_parts.append("✅ 低风险且存在价值，可适度参与")
+        decision.llm_summary = " | ".join(summary_parts)
+
         # 价值信号
         if decision.value_plays:
             top_value = decision.value_plays[0]
@@ -423,6 +535,8 @@ class SmartAdvisor:
             "confidence_score": decision.confidence_score,
             "decision_rationale": decision.decision_rationale,
             "overall_verdict": decision.overall_verdict,
+            "reasoning_chain": decision.reasoning_chain,
+            "llm_summary": decision.llm_summary,
         }, ensure_ascii=False, indent=2)
 
 

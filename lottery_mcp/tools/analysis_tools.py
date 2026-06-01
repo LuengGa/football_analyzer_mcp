@@ -6,6 +6,7 @@ MCP Server Analysis Tools - Match analysis and risk detection tools.
 import json
 import logging
 import os
+import asyncio
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
@@ -1302,48 +1303,34 @@ async def lottery_advisor_analysis(params: AnalyzeMatchInput, ctx: Context) -> s
         if not match_data:
             raise_tool_error(f"未找到比赛ID: {params.match_id}")
 
-        await ctx.report_progress(0.3, "正在获取竞彩资讯数据...")
+        await ctx.report_progress(0.3, "正在并行获取竞彩资讯数据...")
 
-        # 获取竞彩资讯数据
         manager = _get_manager()
-        features = None
-        h2h = None
-        standings = None
-        recent_form = None
-        injuries = None
 
-        try:
-            feat_result = await manager.get_match_feature(params.match_id)
-            if feat_result.get("data"):
-                features = feat_result["data"]
-        except Exception:
-            pass
+        async def _fetch_or_none(coro):
+            try:
+                result = await coro
+                return result.get("data") if result else None
+            except Exception:
+                return None
 
-        try:
-            h2h_result = await manager.get_result_history(params.match_id)
-            if h2h_result.get("data"):
-                h2h = h2h_result["data"]
-        except Exception:
-            pass
+        features, h2h, standings, recent_form, injuries = await asyncio.gather(
+            _fetch_or_none(manager.get_match_feature(params.match_id)),
+            _fetch_or_none(manager.get_result_history(params.match_id)),
+            _fetch_or_none(manager.get_match_tables(params.match_id)),
+            _fetch_or_none(manager.get_match_recent_form(params.match_id)),
+            _fetch_or_none(manager.get_injury_suspension(params.match_id)),
+        )
 
-        try:
-            standings_result = await manager.get_match_tables(params.match_id)
-            if standings_result.get("data"):
-                standings = standings_result["data"]
-        except Exception:
-            pass
+        await ctx.report_progress(0.5, "正在获取国际市场赔率...")
 
+        market_odds = None
         try:
-            form_result = await manager.get_match_recent_form(params.match_id)
-            if form_result.get("data"):
-                recent_form = form_result["data"]
-        except Exception:
-            pass
-
-        try:
-            inj_result = await manager.get_injury_suspension(params.match_id)
-            if inj_result.get("data"):
-                injuries = inj_result["data"]
+            from lottery_mcp.data.sources import FreeDataSourceManager
+            market_manager = FreeDataSourceManager()
+            market_result = await market_manager.get_market_odds(params.match_id)
+            if market_result.get("data"):
+                market_odds = market_result["data"]
         except Exception:
             pass
 
@@ -1357,6 +1344,7 @@ async def lottery_advisor_analysis(params: AnalyzeMatchInput, ctx: Context) -> s
             standings=standings,
             recent_form=recent_form,
             injuries=injuries,
+            market_odds=market_odds,
         )
 
         await ctx.report_progress(1.0, "分析完成")

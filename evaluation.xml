@@ -1,0 +1,42 @@
+<evaluation>
+  <qa_pair>
+    <question>在竞彩足球混合过关中，如果同时包含SPF(胜平负)和BF(比分)两种玩法，根据木桶原则，最多可以串几关？请回答数字。</question>
+    <answer>4</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>在约束编译器C001规则中，以下哪个选项是"半全场"(BQC)玩法的无效选项？A: 胜-胜, B: 胜-平, C: 胜-负, D: 平-胜, E: 平-平, F: 平-负, G: 负-胜, H: 负-平, I: 负-负, J: 胜-胜-胜。请回答无效选项的字母。</question>
+    <answer>J</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>如果用户总资金为2000元，单注投注600元，约束编译器会触发哪条约束的警告？请回答约束ID（格式如C001）。</question>
+    <answer>C010</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>在约束编译器C016规则中，如果同一场比赛SPF选择了"主胜"而RQSPF选择了"客胜"，这会被判定为什么级别的违规？请回答FATAL或WARNING。</question>
+    <answer>WARNING</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>竞彩足球比分(BF)玩法中，以下哪个比分格式是无效的？A: 1:0, B: 2:1, C: 3:3, D: 8:0, E: 胜其他。请回答无效选项的字母。</question>
+    <answer>D</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>在混合过关中，以下哪些玩法可以互相混合？A: 仅SPF+RQSPF, B: SPF+RQSPF+ZJQ+BQC, C: SPF+RQSPF+BF, D: 所有玩法都可混合。请回答正确选项的字母。</question>
+    <answer>B</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>约束编译器C004规则中，赔率的有效范围是多少？请回答格式如"1.01-1000"。</question>
+    <answer>1.01-1000</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>如果用户连续亏损超过配置的最大连续亏损次数，资金健康检查会返回什么状态？A: healthy=true, B: healthy=false且can_continue=false, C: healthy=true但有警告, D: 不检查此项。请回答选项字母。</question>
+    <answer>B</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>竞彩足球单关投注支持哪些玩法？A: 所有5种玩法, B: 仅SPF, C: SPF/RQSPF/ZJQ/BQC, D: SPF/BF。请回答正确选项的字母。</question>
+    <answer>C</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>在SmartAdvisor的6步决策流程中，第4步是什么？A: 价值发现, B: 风险矩阵构建, C: 套利检测, D: 共识评估。请回答正确选项的字母。</question>
+    <answer>B</answer>
+  </qa_pair>
+</evaluation>

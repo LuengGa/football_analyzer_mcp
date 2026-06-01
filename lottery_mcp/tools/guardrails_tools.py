@@ -831,3 +831,124 @@ Workflow: 在任何投注操作前调用，作为最后一道防线。与 valida
     )
     async def _lottery_rule_guard(params: RuleGuardInput, ctx: Context) -> str:
         return await lottery_rule_guard(params, ctx)
+
+    @mcp.tool(
+        name="lottery_enforce_constraints",
+        description="""AI推理防护 - 对AI生成的投注方案进行硬性约束验证
+
+在AI给出任何投注建议后，必须调用此工具对方案进行约束检查。
+检查15条内置约束(C001-C015)，FATAL级别违规将导致方案被拒绝。
+
+验证内容：
+- 选项有效性 (C001): 选项是否属于该玩法
+- 串关场次上限 (C002): 混合过关≤8场，比分≤4场
+- 单场重复限制 (C003): 同一场比赛不能出现在多个串关位置
+- 赔率范围 (C004): 赔率必须在合理范围内
+- 资金限额 (C005): 单注≤1万（理论），单日≤1万
+- 混合过关 (C006): 仅SPF/RQSPF/ZJQ/BQC互混，BF不能混
+- 比分格式 (C007): 必须为X:Y格式
+- 让球盘口 (C008): 让球盘口必须存在
+- 单关限制 (C009): 单关仅限SPF/RQSPF/ZJQ/BQC
+- 资金比例 (C010): 单注≤总资金10%
+- 日亏损上限 (C011): 不超日止损线
+- 串关多样性 (C012): 不全是同一玩法
+- 赔率异动 (C013): 检测赔率偏离市场
+- 伤停检查 (C014): 检查是否有主力伤停
+- 赔率可用性 (C015): 赔率不为空
+
+Use when: 任何投注建议生成后，必须调用此工具验证。
+约束力: 这是整个系统最高优先级的保护机制，AI必须遵守。
+如果approved为false，AI必须拒绝该方案并重新推理。""",
+        annotations={
+            "readOnlyHint": True,
+            "destructiveHint": False,
+            "idempotentHint": True,
+            "openWorldHint": False,
+        },
+    )
+    async def _lottery_enforce_constraints(
+        bet_proposal: str, ctx: Context
+    ) -> str:
+        from lottery_mcp.rules.constraint_compiler import enforce_constraints
+        import json as _json
+        try:
+            proposal = _json.loads(bet_proposal) if isinstance(bet_proposal, str) else bet_proposal
+        except _json.JSONDecodeError:
+            proposal = {}
+        result = enforce_constraints(proposal)
+        return _to_json(result)
+
+    @mcp.tool(
+        name="lottery_check_bankroll_health",
+        description="""资金健康检查 - 全面评估资金状态
+
+检查维度：
+- 回撤率: 是否超过最大回撤上限
+- 日亏损: 是否触发日止损线
+- 连续亏损: 是否触发强制冷却期
+- 资金利用率: 当前资金是否足够支持投注计划
+
+返回：
+- healthy: 资金是否健康
+- can_continue: 是否可以继续投注
+- issues: 致命问题列表
+- warnings: 警告列表
+- drawdown_pct: 回撤百分比
+- total_pnl: 总盈亏
+
+Use when: 每次投注前、每日开始前、制定投注计划时。
+如果can_continue为false，必须停止所有投注活动。""",
+        annotations={
+            "readOnlyHint": True,
+            "destructiveHint": False,
+            "idempotentHint": True,
+            "openWorldHint": False,
+        },
+    )
+    async def _lottery_check_bankroll_health(
+        bankroll: float,
+        initial_bankroll: float,
+        daily_pnl: float = 0.0,
+        weekly_pnl: float = 0.0,
+        consecutive_losses: int = 0,
+        ctx: Context = None,
+    ) -> str:
+        from lottery_mcp.rules.guardrails import check_bankroll_health
+        result = check_bankroll_health(
+            bankroll=bankroll,
+            initial_bankroll=initial_bankroll,
+            daily_pnl=daily_pnl,
+            weekly_pnl=weekly_pnl,
+            consecutive_losses=consecutive_losses,
+        )
+        return _to_json(result)
+
+    @mcp.tool(
+        name="lottery_check_match_deadline",
+        description="""比赛截止检查 - 检查比赛是否已过投注截止时间
+
+竞彩通常在比赛开始前5分钟停止销售。
+此工具检查指定比赛是否还能投注。
+
+返回：
+- can_bet: 是否还能投注
+- match_time: 比赛时间
+- deadline: 投注截止时间
+- minutes_remaining: 剩余分钟数
+- reason: 不能投注的原因
+
+Use when: 在生成投注单前，检查所有涉及比赛是否还能投注。
+如果can_bet为false，该比赛不能包含在投注方案中。""",
+        annotations={
+            "readOnlyHint": True,
+            "destructiveHint": False,
+            "idempotentHint": True,
+            "openWorldHint": False,
+        },
+    )
+    async def _lottery_check_match_deadline(
+        match_time: str, ctx: Context = None
+    ) -> str:
+        from lottery_mcp.rules.guardrails import check_match_deadline
+        result = check_match_deadline(match_time)
+        return _to_json(result)
