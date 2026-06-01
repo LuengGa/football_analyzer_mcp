@@ -1,0 +1,132 @@
+{
+  "timestamp": "2026-05-28T08:02:49.046723",
+  "summary": {
+    "total_tests": 13,
+    "passed": 13,
+    "failed": 0,
+    "pass_rate": 1.0
+  },
+  "phases": {
+    "phase4": {
+      "name": "5大玩法分析测试",
+      "tests": 2,
+      "passed": 2
+    },
+    "phase5": {
+      "name": "协同验证测试",
+      "tests": 5,
+      "passed": 5
+    },
+    "phase6": {
+      "name": "Kelly投注策略测试",
+      "tests": 3,
+      "passed": 3
+    },
+    "phase7": {
+      "name": "压力测试",
+      "tests": 3,
+      "passed": 3
+    }
+  },
+  "issues": [],
+  "detailed_results": {
+    "phase4_play_analysis": [
+      {
+        "test": "PoissonModel.predict",
+        "success": true,
+        "time_ms": 6.5402984619140625,
+        "home_win_prob": 0.4879,
+        "draw_prob": 0.2599,
+        "away_win_prob": 0.2522
+      },
+      {
+        "test": "PlayAnalyzer.analyze_all_plays",
+        "success": true,
+        "time_ms": 17.33994483947754,
+        "play_types": [
+          "SPF",
+          "RQSPF",
+          "BF",
+          "ZJQ",
+          "BQC"
+        ]
+      }
+    ],
+    "phase5_synergy_validation": [
+      {
+        "test": "PlaySynergyAnalyzer.init",
+        "success": true,
+        "time_ms": 0
+      },
+      {
+        "test": "validate_spf_rqspf_consistency",
+        "success": true,
+        "time_ms": 1779955369008.1619,
+        "is_consistent": true,
+        "confidence_boost": 0.1
+      },
+      {
+        "test": "validate_bf_zjq_consistency",
+        "success": true,
+        "is_consistent": true,
+        "confidence_boost": 0.15
+      },
+      {
+        "test": "validate_bqc_spf_consistency",
+        "success": true,
+        "is_consistent": true,
+        "confidence_boost": 0.12
+      },
+      {
+        "test": "find_synergy_opportunities",
+        "success": true,
+        "opportunities_count": 2
+      }
+    ],
+    "phase6_kelly_betting": [
+      {
+        "test": "KellyOptimizer.calculate",
+        "success": true,
+        "full_kelly": 0.1,
+        "recommended": 0.05,
+        "recommendation": "小额参与"
+      },
+      {
+        "test": "optimize_bet_portfolio",
+        "success": true,
+        "allocations_count": 1,
+        "total_exposure": 2.27
+      },
+      {
+        "test": "calculate_optimal_bet",
+        "success": true,
+        "recommended_stake": 25.0
+      }
+    ],
+    "phase7_stress_test": [
+      {
+        "test": "concurrent_kelly_100",
+        "success": true,
+        "total_time_ms": 0.40030479431152344,
+        "avg_time_ms": 0.004003047943115234,
+        "success_rate": 1.0
+      },
+      {
+        "test": "cache_performance",
+        "success": true,
+        "write_time_ms": 6.898403167724609,
+        "read_time_ms": 0.17118453979492188,
+        "avg_write_ms": 0.0689840316772461,
+        "avg_read_ms": 0.0017118453979492188
+      },
+      {
+        "test": "error_handling_invalid_params",
+        "success": true,
+        "kelly1_zero": true,
+        "kelly2_zero": true,
+        "kelly3_zero": true,
+        "kelly4_zero": true
+      }
+    ]
+  }
+}
