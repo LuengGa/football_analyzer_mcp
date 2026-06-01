@@ -125,6 +125,7 @@ __all__ = [
     "register_all_tools",
     "register_all_resources",
     "register_all_prompts",
+    "register_workflow_tools",
     "register_data_tools",
     "register_analysis_tools",
     "register_betting_tools",
