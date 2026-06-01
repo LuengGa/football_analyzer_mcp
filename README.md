@@ -1,0 +1,1 @@
+# football_analyzer_mcp
