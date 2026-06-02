@@ -13,6 +13,7 @@ from .helpers import raise_tool_error, _to_json
 from lottery_mcp.models import (
     RejectInput,
     RuleGuardInput,
+    ValidateBetInput,
     ValidatePlanInput,
     ValidateScenarioInput,
 )

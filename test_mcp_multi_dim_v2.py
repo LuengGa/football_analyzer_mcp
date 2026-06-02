@@ -246,9 +246,7 @@ PARAM_MAP = {
     'lottery_list_workflows': {},
     'lottery_manage_config': {'action': 'get', 'config_key': 'max_daily_stake'},
     'lottery_monitor_odds': {'match_id': VALID_MATCH, 'current_odds': {'win': 2.0, 'draw': 3.5, 'lose': 3.0}},
-    'lottery_optimize_stakes': {'bankroll': 1000.0, 'bets': [{'match_id': 'M001', 'play_type': 'SPF', 'selection': '主胜', 'odds': 2.0}], 'strategy': 'kelly'},
-    'lottery_validate_parlay': {'bets': [{'match_id': 'M001', 'play_type': 'SPF', 'selection': '主胜', 'odds': 2.0, 'stake': 100}, {'match_id': 'M002', 'play_type': 'SPF', 'selection': '客胜', 'odds': 1.8, 'stake': 100}], 'parlay_type': '2x1', 'total_stake': 200},
-    'lottery_validate_scenario': {'scenario_type': 'single_bet', 'bets': [{'match_id': 'M001', 'play_type': 'SPF', 'selection': '主胜', 'odds': 2.0, 'stake': 100}], 'total_stake': 100},
+    'lottery_optimize_stakes': {'bankroll': 1000.0, 'bets': [{'match_id': 'M001', 'play_type': 'SPF', 'selection': '主胜', 'odds': 2.0, 'stake': 100}], 'strategy': 'kelly'},
     'lottery_predict_with_model': {'match_id': VALID_MATCH},
     'lottery_quantify_injury_impact': {'match_id': VALID_MATCH},
     'lottery_query_history': {'date': '2026-01-01'},
@@ -266,9 +264,9 @@ PARAM_MAP = {
     'lottery_track_bet': {'bet_id': 'TEST001', 'match_id': 'M001', 'play_type': 'SPF', 'stake': 100, 'odds': 2.0},
     'lottery_track_odds_changes': {'match_id': VALID_MATCH},
     'lottery_validate_bet': {'match_id': 'M001', 'play_type': 'SPF', 'selection': '主胜', 'odds': 2.0, 'stake': 100},
-    'lottery_validate_parlay': {'bets': [{'match_id': 'M001', 'play_type': 'SPF', 'selection': '主胜', 'odds': 2.0}], 'parlay_type': '1c1', 'total_stake': 100.0},
-    'lottery_validate_plan': {'plan_type': 'daily', 'bets': [{'match_id': 'M001', 'play_type': 'SPF', 'selection': '主胜', 'odds': 2.0}], 'total_budget': 1000.0},
-    'lottery_validate_scenario': {'scenario_type': 'single_bet', 'bets': [{'match_id': 'M001', 'play_type': 'SPF', 'selection': '主胜', 'odds': 2.0}]},
+    'lottery_validate_parlay': {'bets': [{'match_id': 'M001', 'play_type': 'SPF', 'selection': '主胜', 'odds': 2.0, 'stake': 100}, {'match_id': 'M002', 'play_type': 'SPF', 'selection': '客胜', 'odds': 1.8, 'stake': 100}], 'parlay_type': '2x1', 'total_stake': 200},
+    'lottery_validate_plan': {'plan_type': 'daily', 'bets': [{'match_id': 'M001', 'play_type': 'SPF', 'selection': '主胜', 'odds': 2.0, 'stake': 100}], 'total_budget': 1000.0},
+    'lottery_validate_scenario': {'scenario_type': 'single_bet', 'bets': [{'match_id': 'M001', 'play_type': 'SPF', 'selection': '主胜', 'odds': 2.0, 'stake': 100}], 'total_stake': 100},
     'lottery_verify_results': {'match_id': VALID_MATCH},
 }
 
