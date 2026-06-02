@@ -1723,19 +1723,28 @@ async def lottery_analyze_match(params: AnalyzeMatchInput, ctx: Context) -> str:
 
         await ctx.log_info(f"[比赛分析] 开始深度分析比赛 {match_id}...")
 
-        # 1. 获取官方赔率数据
-        await ctx.log_info("[比赛分析] 获取官方赔率...")
-        official_odds = await manager.get_lottery_odds_change(match_id)
-        if not official_odds.get("data"):
-            raise_tool_error(
-                "无法获取官方赔率数据",
-                code="NO_OFFICIAL_ODDS",
-                suggestion="请确认比赛ID正确，或稍后重试"
-            )
+        # 1. 先尝试从缓存获取数据
+        matches = get_cached_matches()
+        match_data = None
+        for m in matches:
+            if m.get("match_id") == match_id:
+                match_data = m
+                break
 
-        match_data = official_odds["data"]
-        if isinstance(match_data, list) and len(match_data) > 0:
-            match_data = match_data[0]
+        if not match_data:
+            # 缓存没有，再尝试获取官方赔率数据
+            await ctx.log_info("[比赛分析] 获取官方赔率...")
+            official_odds = await manager.get_lottery_odds_change(match_id)
+            if not official_odds.get("data"):
+                raise_tool_error(
+                    "无法获取官方赔率数据",
+                    code="NO_OFFICIAL_ODDS",
+                    suggestion="请确认比赛ID正确，或稍后重试"
+                )
+
+            match_data = official_odds["data"]
+            if isinstance(match_data, list) and len(match_data) > 0:
+                match_data = match_data[0]
 
         # 2. 获取比赛资讯
         await ctx.log_info("[比赛分析] 获取比赛资讯...")
