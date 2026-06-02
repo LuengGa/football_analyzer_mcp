@@ -199,7 +199,7 @@ PARAM_MAP = {
     'lottery_analyze_results': {'match_id': VALID_MATCH},
     'lottery_analyze_with_pipeline': {},
     'lottery_assess_risk': {'match_id': VALID_MATCH},
-    'lottery_calculate_bonus': {'bets': [{'match_id': 'M001', 'play_type': 'SPF', 'selection': '主胜', 'odds': 2.0, 'stake': 100}], 'parlay_type': '1c1'},
+    'lottery_calculate_bonus': {'bets': [{'match_id': 'M001', 'play_type': 'SPF', 'selection': '主胜', 'odds': 2.0, 'stake': 100}], 'parlay_type': '2x1', 'total_stake': 100},
     'lottery_check_bankroll_health': {'bankroll': 5000, 'initial_bankroll': 10000},
     'lottery_check_match_deadline': {'match_time': '2026-12-31T20:00:00'},
     'lottery_compare_matches': {'match_ids': ['M001', 'M002'], 'comparison_dimensions': ['odds', 'form']},
@@ -244,9 +244,11 @@ PARAM_MAP = {
     'lottery_historical_analysis': {'match_id': VALID_MATCH},
     'lottery_list_local_odds_matches': {},
     'lottery_list_workflows': {},
-    'lottery_manage_config': {'action': 'get', 'key': 'default_parlay_type'},
+    'lottery_manage_config': {'action': 'get', 'config_key': 'max_daily_stake'},
     'lottery_monitor_odds': {'match_id': VALID_MATCH, 'current_odds': {'win': 2.0, 'draw': 3.5, 'lose': 3.0}},
     'lottery_optimize_stakes': {'bankroll': 1000.0, 'bets': [{'match_id': 'M001', 'play_type': 'SPF', 'selection': '主胜', 'odds': 2.0}], 'strategy': 'kelly'},
+    'lottery_validate_parlay': {'bets': [{'match_id': 'M001', 'play_type': 'SPF', 'selection': '主胜', 'odds': 2.0, 'stake': 100}, {'match_id': 'M002', 'play_type': 'SPF', 'selection': '客胜', 'odds': 1.8, 'stake': 100}], 'parlay_type': '2x1', 'total_stake': 200},
+    'lottery_validate_scenario': {'scenario_type': 'single_bet', 'bets': [{'match_id': 'M001', 'play_type': 'SPF', 'selection': '主胜', 'odds': 2.0, 'stake': 100}], 'total_stake': 100},
     'lottery_predict_with_model': {'match_id': VALID_MATCH},
     'lottery_quantify_injury_impact': {'match_id': VALID_MATCH},
     'lottery_query_history': {'date': '2026-01-01'},
@@ -709,19 +711,19 @@ async def test_dim10_config():
     stats = TestStats()
     
     if 'lottery_manage_config' in tools:
-        # 测试获取配置
-        print("\n--- 10.1 获取配置 ---")
-        status, elapsed, result = await call_tool('lottery_manage_config', {'action': 'get', 'key': 'default_parlay_type'})
+        # 测试获取单个配置
+        print("\n--- 10.1 获取单个配置 ---")
+        status, elapsed, result = await call_tool('lottery_manage_config', {'action': 'get', 'config_key': 'max_daily_stake'})
         ok = status == 'ok'
         stats.record(ok, elapsed, f"获取配置: {result[:100]}")
-        print(f"{'✅' if ok else '❌'} 获取配置: {elapsed:.3f}s")
+        print(f"{'✅' if ok else '❌'} 获取单个配置: {elapsed:.3f}s")
         
-        # 测试列出所有配置
-        print("\n--- 10.2 列出配置 ---")
-        status, elapsed, result = await call_tool('lottery_manage_config', {'action': 'list'})
+        # 测试获取所有配置（相当于 list）
+        print("\n--- 10.2 获取所有配置 ---")
+        status, elapsed, result = await call_tool('lottery_manage_config', {'action': 'get'})
         ok = status == 'ok'
-        stats.record(ok, elapsed, f"列出配置: {result[:100]}")
-        print(f"{'✅' if ok else '❌'} 列出配置: {elapsed:.3f}s")
+        stats.record(ok, elapsed, f"获取所有配置: {result[:100]}")
+        print(f"{'✅' if ok else '❌'} 获取所有配置: {elapsed:.3f}s")
     
     return stats
 

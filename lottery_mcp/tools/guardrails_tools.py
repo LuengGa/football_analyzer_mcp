@@ -144,6 +144,9 @@ class GuardrailsEngine:
         
         综合检查场景的各种限制
         """
+        # 确保 bets 都是 ValidateBetInput 实例
+        if scenario.bets:
+            scenario.bets = [ValidateBetInput(**b) if isinstance(b, dict) else b for b in scenario.bets]
         # 硬性限制检查
         hard_check = self.check_hard_limits(scenario)
         

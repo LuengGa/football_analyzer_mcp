@@ -405,6 +405,9 @@ class RulesEngine:
         # 兼容 dict 传入
         if isinstance(parlay, dict):
             parlay = ValidateParlayInput(**parlay)
+        # 确保 bets 都是 ValidateBetInput 实例
+        if parlay.bets:
+            parlay.bets = [ValidateBetInput(**b) if isinstance(b, dict) else b for b in parlay.bets]
         errors = []
         warnings = []
 
