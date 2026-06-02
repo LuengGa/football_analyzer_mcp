@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """
-Lottery MCP 超全面多维度测试脚本 v2.0
+Lottery MCP 超全面多维度测试脚本 v2.1
 =======================================================
 测试维度扩展到 **20+** 个维度，覆盖：
 1. 工具元数据完整性
 2. 端到端工作流
-3. 参数边界值 & 异常输入
+3. 参数边界值 &amp; 异常输入
 4. 错误处理优雅降级
-5. 资源 & 提示词
+5. 资源 &amp; 提示词
 6. 输出格式验证
 7. 集成数据流
-8. 性能 & 并发
+8. 性能 &amp; 并发
 9. 安全注入防护
 10. 系统指令验证
 11. 配置管理
@@ -35,8 +35,104 @@ import re
 import inspect
 from typing import Any, Dict, List, Optional, Tuple
 from dataclasses import dataclass, field
+from datetime import datetime
 
 from pydantic import create_model
+
+# ============================================================
+# 模拟数据初始化
+# ============================================================
+def setup_mock_data_in_cache():
+    """设置模拟数据到缓存中"""
+    print("正在设置模拟数据到缓存...")
+    
+    # 设置模拟比赛数据
+    mock_matches = [
+        {
+            "match_id": "TESTMATCH001",
+            "sporttery_match_id": "20260601001",
+            "league": "英超",
+            "home_team": "曼联",
+            "away_team": "利物浦",
+            "match_time": "2026-06-01 20:00",
+            "odds": {
+                "win": 2.1,
+                "draw": 3.4,
+                "lose": 3.2
+            },
+            "had": {
+                "win": 2.1,
+                "draw": 3.4,
+                "lose": 3.2
+            },
+            "hhad": {
+                "handicap": "0",
+                "win": 1.9,
+                "draw": 3.6,
+                "lose": 3.8
+            },
+            "crs": {
+                "options": [
+                    {"score": "1-0", "odds": 7.5},
+                    {"score": "2-0", "odds": 12.0},
+                    {"score": "1-1", "odds": 6.5}
+                ]
+            },
+            "ttg": {
+                "options": [
+                    {"goals": "0", "odds": 15.0},
+                    {"goals": "1", "odds": 5.5},
+                    {"goals": "2", "odds": 4.2},
+                    {"goals": "3", "odds": 5.0}
+                ]
+            },
+            "hafu": {
+                "options": [
+                    {"result": "胜胜", "odds": 4.8},
+                    {"result": "胜平", "odds": 8.0},
+                    {"result": "平胜", "odds": 9.0}
+                ]
+            },
+            "status": "not_started",
+            "home_score": 0,
+            "away_score": 0
+        },
+        {
+            "match_id": "TESTMATCH002",
+            "sporttery_match_id": "20260601002",
+            "league": "西甲",
+            "home_team": "巴塞罗那",
+            "away_team": "皇家马德里",
+            "match_time": "2026-06-01 22:00",
+            "odds": {
+                "win": 1.9,
+                "draw": 3.5,
+                "lose": 3.8
+            },
+            "had": {
+                "win": 1.9,
+                "draw": 3.5,
+                "lose": 3.8
+            },
+            "status": "not_started",
+            "home_score": 0,
+            "away_score": 0
+        }
+    ]
+    
+    # 设置缓存
+    from lottery_mcp.tools.data_tools import set_cached_matches
+    set_cached_matches(mock_matches, ttl=3600)
+    print(f"✅ 设置了 {len(mock_matches)} 场模拟比赛数据到缓存")
+    
+    # 设置模拟的历史数据
+    try:
+        from lottery_mcp.tools.data_tools import _match_cache
+        print(f"   缓存确认: {len(_match_cache)} 场比赛")
+        for m in _match_cache:
+            print(f"    - {m.get('home_team', '')} vs {m.get('away_team', '')}")
+    except Exception as e:
+        print(f"   缓存设置确认失败: {e}")
 
 # ============================================================
 # 基础设施
@@ -177,7 +273,8 @@ class TestStats:
 # 测试数据
 # ============================================================
 INVALID_MATCH = "9999999999999999"
-VALID_MATCH = "2025052510001"
+VALID_MATCH = "TESTMATCH001"  # 使用模拟数据ID
+VALID_MATCH2 = "TESTMATCH002"
 EMPTY_STR = ""
 LARGE_STRING = "x" * 10000
 SPECIAL_CHARS = "测试 中文 🌍 éñøû"
@@ -901,10 +998,14 @@ async def test_dim15_system_status():
 # ============================================================
 async def main():
     print("="*80)
-    print("🏆 Lottery MCP 超全面多维度测试 v2.0")
+    print("🏆 Lottery MCP 超全面多维度测试 v2.1")
     print(f"📅 测试时间: {time.strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"🛠️  工具总数: {len(tools)} | 📚 资源: {len(resources)} | 💬 提示词: {len(prompts)}")
     print("="*80)
+    
+    # 第1步：设置模拟数据到缓存
+    setup_mock_data_in_cache()
+    print()
     
     all_stats = {}
     all_dimensions = []
