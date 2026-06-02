@@ -40,6 +40,32 @@ def raise_tool_error(message: str, code: str = "VALIDATION_ERROR", suggestion: s
     raise ToolError(error_msg)
 
 
+def _clean_dict(obj: Any) -> Any:
+    """递归清理字典，移除 tuple 键和 numpy 类型
+    
+    Args:
+        obj: 要清理的对象
+        
+    Returns:
+        清理后的对象
+    """
+    if isinstance(obj, dict):
+        # 过滤并转换键为字符串，确保没有 tuple 键
+        clean_dict = {}
+        for key, val in obj.items():
+            # 将非基本类型键转换为字符串
+            if not isinstance(key, (str, int, float, bool, type(None))):
+                key = str(key)
+            clean_dict[key] = _clean_dict(val)
+        return clean_dict
+    elif isinstance(obj, list):
+        return [_clean_dict(item) for item in obj]
+    elif isinstance(obj, (np.ndarray, np.generic)):
+        # 转换 numpy 类型为 Python 基本类型
+        return obj.tolist() if hasattr(obj, "tolist") else float(obj)
+    else:
+        return obj
+
 def _to_json(data: Any) -> str:
     """将数据转换为JSON字符串
     
@@ -49,7 +75,8 @@ def _to_json(data: Any) -> str:
     Returns:
         JSON字符串
     """
-    return json.dumps(data, ensure_ascii=False, indent=2, default=str)
+    clean_data = _clean_dict(data)
+    return json.dumps(clean_data, ensure_ascii=False, indent=2, default=str)
 
 
 def format_output(data: Dict[str, Any], message: str = "", 

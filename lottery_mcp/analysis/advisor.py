@@ -142,38 +142,52 @@ class SmartAdvisor:
     # ================================================================
     def _evaluate_consensus(self, decision: AdvisorDecision, analysis):
         """评估赔率模型、统计模型、基本面三者的共识度"""
-        spf = analysis.spf_probs
-        official = analysis.official_odds.get("spf", {}).get("implied_probs", {})
+        spf = analysis.spf_probs if hasattr(analysis, 'spf_probs') else None
+        official = analysis.official_odds.get("spf", {}).get("implied_probs", {}) if hasattr(analysis, 'official_odds') else {}
 
         # 赔率隐含概率 vs 基本面调整后概率
-        if spf and official:
-            diffs = {
-                k: abs(spf.get(k, 0) - official.get(k, 0))
-                for k in ["主胜", "平局", "客胜"]
-            }
-            avg_diff = sum(diffs.values()) / 3 if diffs else 0
-
-            consensus_level = "高"
-            if avg_diff > 0.08:
-                consensus_level = "低"
-            elif avg_diff > 0.04:
-                consensus_level = "中"
-
-            decision.model_consensus = {
-                "odds_implied": official,
-                "fundamental_adjusted": spf,
-                "differences": diffs,
-                "avg_diff": round(avg_diff, 4),
-                "consensus_level": consensus_level,
-            }
-
-            decision.decision_rationale.append(
-                f"模型共识度: {consensus_level} (平均差异{avg_diff:.1%})"
-            )
-            if consensus_level == "低":
+        if spf:
+            if not official:
+                # 如果没有官方隐含概率，就用简单的共识评估
+                decision.model_consensus = {
+                    "fundamental_adjusted": spf,
+                    "consensus_level": "中",
+                }
                 decision.decision_rationale.append(
-                    "⚠️ 赔率与基本面存在较大分歧，建议谨慎对待赔率定价"
+                    "模型共识度: 中 (缺少官方赔率数据)"
                 )
+            else:
+                diffs = {
+                    k: abs(spf.get(k, 0) - official.get(k, 0))
+                    for k in ["主胜", "平局", "客胜"]
+                }
+                avg_diff = sum(diffs.values()) / 3 if diffs else 0
+
+                consensus_level = "高"
+                if avg_diff > 0.08:
+                    consensus_level = "低"
+                elif avg_diff > 0.04:
+                    consensus_level = "中"
+
+                decision.model_consensus = {
+                    "odds_implied": official,
+                    "fundamental_adjusted": spf,
+                    "differences": diffs,
+                    "avg_diff": round(avg_diff, 4),
+                    "consensus_level": consensus_level,
+                }
+
+                decision.decision_rationale.append(
+                    f"模型共识度: {consensus_level} (平均差异{avg_diff:.1%})"
+                )
+                if consensus_level == "低":
+                    decision.decision_rationale.append(
+                        "⚠️ 赔率与基本面存在较大分歧，建议谨慎对待赔率定价"
+                    )
+        else:
+            # 如果连 spf_probs 也没有，给个默认值
+            decision.model_consensus = {"consensus_level": "低"}
+            decision.decision_rationale.append("模型共识度: 低 (缺少分析数据)")
 
     # ================================================================
     # 第2步：价值发现
@@ -183,21 +197,21 @@ class SmartAdvisor:
         value_plays = []
 
         # 从价值信号中提取
-        for signal in analysis.value_signals:
-            if "低估" in signal.get("type", ""):
-                value_plays.append({
-                    "type": "市场定价偏差",
-                    "detail": signal.get("detail", ""),
-                    "action": signal.get("action", ""),
-                    "confidence": "中",
-                })
+        if hasattr(analysis, 'value_signals'):
+            for signal in analysis.value_signals:
+                if "低估" in signal.get("type", ""):
+                    value_plays.append({
+                        "type": "市场定价偏差",
+                        "detail": signal.get("detail", ""),
+                        "action": signal.get("action", ""),
+                        "confidence": "中",
+                    })
 
         # 从赔率分析中找价值
-        spf_info = analysis.official_odds.get("spf", {})
-        if spf_info:
+        spf_info = analysis.official_odds.get("spf", {}) if hasattr(analysis, 'official_odds') else {}
+        probs = analysis.spf_probs if hasattr(analysis, 'spf_probs') else None
+        if spf_info and probs:
             odds = spf_info.get("odds", {})
-            probs = analysis.spf_probs
-
             for selection in ["主胜", "平局", "客胜"]:
                 if selection in odds and selection in probs:
                     fair_odds = 1 / probs[selection] if probs[selection] > 0 else 999
@@ -225,8 +239,8 @@ class SmartAdvisor:
         signals = []
 
         # SPF vs RQSPF 矛盾检测
-        spf = analysis.spf_probs
-        rqspf = analysis.rqspf_probs
+        spf = analysis.spf_probs if hasattr(analysis, 'spf_probs') else None
+        rqspf = analysis.rqspf_probs if hasattr(analysis, 'rqspf_probs') else None
         if spf and rqspf:
             spf_home = spf.get("主胜", 0)
             rqspf_home = rqspf.get("主胜", 0)
@@ -239,11 +253,12 @@ class SmartAdvisor:
                 })
 
         # 竞彩赔率 vs 市场赔率分歧
-        market_comp = analysis.market_odds_comparison
-        if market_comp and analysis.value_signals:
+        market_comp = analysis.market_odds_comparison if hasattr(analysis, 'market_odds_comparison') else None
+        value_signals = analysis.value_signals if hasattr(analysis, 'value_signals') else []
+        if market_comp and value_signals:
             signals.append({
                 "type": "跨市场分歧",
-                "detail": f"竞彩与市场存在{len(analysis.value_signals)}个分歧信号",
+                "detail": f"竞彩与市场存在{len(value_signals)}个分歧信号",
                 "action": "关注是否有信息差导致的赔率偏差",
             })
 
@@ -610,7 +625,7 @@ class SmartAdvisor:
             verdicts.append(f"价值发现: {top_value.get('detail', '')}")
 
         # 风险信号
-        if decision.risk_factors_high(analysis):
+        if self.risk_factors_high(analysis):
             verdicts.append("⚠️ 存在高风险信号，建议减少投注规模")
 
         # 投注方案
